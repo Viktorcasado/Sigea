@@ -1,5 +1,5 @@
 import { createContext, useState, useContext, ReactNode, FC, useEffect } from 'react';
-import { User } from '@/src/types';
+import { User, UserStatus } from '@/src/types';
 import { supabase } from '@/src/integrations/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 
@@ -18,6 +18,12 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const deriveStatus = (userType: string | null, isOrganizer: boolean): UserStatus => {
+    if (isOrganizer) return 'gestor';
+    if (userType === 'aluno' || userType === 'servidor') return 'ativo_vinculado';
+    return 'ativo_comunidade';
+  };
 
   const fetchProfile = async (supabaseUser: SupabaseUser | null) => {
     if (supabaseUser) {
@@ -60,7 +66,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
           nome: profile.full_name,
           email: supabaseUser.email || '',
           perfil: profile.user_type || 'comunidade_externa',
-          status: profile.is_organizer ? 'gestor' : 'ativo_comunidade',
+          status: deriveStatus(profile.user_type, profile.is_organizer || false),
           is_organizer: profile.is_organizer || false,
           campus: profile.campus,
           matricula: profile.registration_number,
@@ -136,7 +142,16 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
       .eq('id', user.id);
     
     if (error) throw error;
-    setUser(prev => prev ? { ...prev, ...updates } : null);
+    
+    // Atualiza o estado local garantindo que o status seja re-derivado corretamente
+    const newUserType = updates.perfil !== undefined ? updates.perfil : user.perfil;
+    const newIsOrganizer = updates.is_organizer !== undefined ? updates.is_organizer : user.is_organizer;
+    
+    setUser(prev => prev ? { 
+      ...prev, 
+      ...updates,
+      status: deriveStatus(newUserType, newIsOrganizer)
+    } : null);
   };
 
   return (
