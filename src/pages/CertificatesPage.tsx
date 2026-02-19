@@ -19,7 +19,6 @@ export default function CertificatesPage() {
     if (!user) return;
     setLoading(true);
 
-    // Alterado de 'eventos' para 'events' para bater com a estrutura do app
     const { data, error } = await supabase
       .from('certificados')
       .select(`
@@ -61,44 +60,37 @@ export default function CertificatesPage() {
     const doc = new jsPDF({ orientation: 'landscape' });
     const validationUrl = `${window.location.origin}/validar-certificado?codigo=${cert.codigo}`;
 
-    // Fundo e Bordas
     doc.setFillColor(255, 255, 255);
     doc.rect(0, 0, 297, 210, 'F');
     doc.setDrawColor(79, 70, 229);
     doc.setLineWidth(2);
     doc.rect(10, 10, 277, 190);
     
-    // Cabeçalho
     doc.setFontSize(12);
     doc.setTextColor(100, 100, 100);
     doc.text('SISTEMA INTEGRADO DE GESTÃO DE EVENTOS ACADÊMICOS - SIGEA', 148.5, 30, { align: 'center' });
 
-    // Título Principal
     doc.setFontSize(48);
     doc.setTextColor(31, 41, 55);
     doc.setFont('helvetica', 'bold');
     doc.text('CERTIFICADO', 148.5, 65, { align: 'center' });
 
-    // Texto de Certificação
     doc.setFontSize(18);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(75, 85, 99);
     doc.text('Certificamos para os devidos fins que', 148.5, 90, { align: 'center' });
     
-    // Nome do Usuário
     doc.setFontSize(32);
     doc.setTextColor(79, 70, 229);
     doc.setFont('helvetica', 'bold');
     doc.text(user?.nome || 'Participante', 148.5, 110, { align: 'center' });
 
-    // Detalhes do Evento
     doc.setFontSize(18);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(75, 85, 99);
     doc.text(`participou com êxito do evento "${cert.event.titulo}"`, 148.5, 130, { align: 'center' });
     doc.text(`realizado em ${cert.event.dataInicio.toLocaleDateString('pt-BR')} no campus ${cert.event.campus}.`, 148.5, 140, { align: 'center' });
 
-    // QR Code
     const qrCodeDataUrl = await QRCode.toDataURL(validationUrl);
     doc.addImage(qrCodeDataUrl, 'PNG', 20, 155, 35, 35);
     
@@ -112,8 +104,8 @@ export default function CertificatesPage() {
   return (
     <div className="space-y-8">
       <header>
-        <h1 className="text-3xl font-black text-gray-900">Certificados</h1>
-        <p className="text-gray-500 mt-1">Seus documentos de participação acadêmica</p>
+        <h1 className="text-3xl font-black text-gray-900 dark:text-white">Certificados</h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-1">Seus documentos de participação acadêmica</p>
       </header>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -121,7 +113,7 @@ export default function CertificatesPage() {
           <BadgeCheck className="w-6 h-6" />
           Validar certificado
         </Link>
-        <Link to="/explorar" className="flex items-center justify-center gap-3 bg-white border border-gray-200 text-gray-700 font-bold px-6 py-4 rounded-2xl hover:bg-gray-50 transition-all">
+        <Link to="/explorar" className="flex items-center justify-center gap-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 font-bold px-6 py-4 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
           <Search className="w-6 h-6" />
           Buscar eventos
         </Link>
@@ -129,13 +121,13 @@ export default function CertificatesPage() {
 
       <main className="space-y-4">
         {loading ? (
-          [1, 2, 3].map(i => <div key={i} className="h-32 bg-gray-100 animate-pulse rounded-2xl" />)
+          [1, 2, 3].map(i => <div key={i} className="h-32 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-2xl" />)
         ) : certificates.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-3xl border border-gray-100">
-            <Award className="w-16 h-16 mx-auto text-gray-200 mb-4" />
-            <h3 className="text-xl font-bold text-gray-700">Nenhum certificado ainda</h3>
-            <p className="text-gray-500 mt-2">Inscreva-se em eventos e participe para emitir seus certificados.</p>
-            <Link to="/explorar" className="mt-6 inline-block text-indigo-600 font-bold hover:underline">
+          <div className="text-center py-20 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800">
+            <Award className="w-16 h-16 mx-auto text-gray-200 dark:text-gray-700 mb-4" />
+            <h3 className="text-xl font-bold text-gray-700 dark:text-gray-300">Nenhum certificado ainda</h3>
+            <p className="text-gray-500 dark:text-gray-500 mt-2">Inscreva-se em eventos e participe para emitir seus certificados.</p>
+            <Link to="/explorar" className="mt-6 inline-block text-indigo-600 dark:text-indigo-400 font-bold hover:underline">
               Explorar eventos agora
             </Link>
           </div>
@@ -146,25 +138,25 @@ export default function CertificatesPage() {
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4"
+              className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-center gap-4"
             >
               <div className="flex-1">
-                <h3 className="font-bold text-gray-900 text-lg">{cert.event?.titulo || 'Evento não encontrado'}</h3>
-                <p className="text-sm text-gray-500 font-mono mt-1">{cert.codigo}</p>
-                <p className="text-xs text-gray-400 mt-2">Emitido em {cert.dataEmissao.toLocaleDateString('pt-BR')}</p>
+                <h3 className="font-bold text-gray-900 dark:text-white text-lg">{cert.event?.titulo || 'Evento não encontrado'}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 font-mono mt-1">{cert.codigo}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">Emitido em {cert.dataEmissao.toLocaleDateString('pt-BR')}</p>
               </div>
               <div className="flex gap-2">
                 <button 
                   onClick={() => generatePdf(cert)}
                   disabled={!cert.event}
-                  className="p-3 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors disabled:opacity-50"
+                  className="p-3 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors disabled:opacity-50"
                   title="Baixar PDF"
                 >
                   <Download className="w-5 h-5" />
                 </button>
                 <button 
                   onClick={() => { navigator.clipboard.writeText(cert.codigo); alert('Código copiado!'); }}
-                  className="p-3 bg-gray-50 text-gray-600 rounded-xl hover:bg-gray-100 transition-colors"
+                  className="p-3 bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   title="Copiar Código"
                 >
                   <Copy className="w-5 h-5" />

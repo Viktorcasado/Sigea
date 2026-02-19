@@ -22,7 +22,7 @@ export default function LoginPage() {
     setError(null);
     try {
       await login(email, password);
-      navigate('/'); // O onAuthStateChange cuidará do redirecionamento
+      navigate('/');
     } catch (err: any) {
       if (err.message.includes('Invalid login credentials')) {
         setError('E-mail ou senha inválidos.');
@@ -46,16 +46,15 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-2xl shadow-lg">
+    <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950 p-4">
+      <div className="w-full max-w-md p-8 space-y-6 bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-transparent dark:border-gray-800">
         <div className="text-center">
-          {/* <img src="/sigea-logo.svg" alt="Logo SIGEA" className="w-24 h-24 mx-auto mb-4" /> */}
-          <h1 className="text-3xl font-bold text-gray-900">Entrar</h1>
-          <p className="text-gray-600 mt-2">Acesse para se inscrever e emitir certificados.</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Entrar</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">Acesse para se inscrever e emitir certificados.</p>
         </div>
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">E-mail</label>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">E-mail</label>
             <input
               id="email"
               type="email"
@@ -63,11 +62,11 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-3 py-2 mt-1 border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             />
           </div>
           <div className='relative'>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">Senha</label>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Senha</label>
             <input
               id="password"
               type={showPassword ? 'text' : 'password'}
@@ -75,14 +74,14 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-3 py-2 mt-1 border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             />
             <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 top-6 pr-3 flex items-center text-gray-500">
               {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </button>
           </div>
           <div className="text-right">
-            <Link to="/forgot-password" className="text-sm font-medium text-indigo-600 hover:text-indigo-500">Esqueci minha senha</Link>
+            <Link to="/forgot-password" className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500">Esqueci minha senha</Link>
           </div>
           {error && <p className="text-sm text-red-600 text-center">{error}</p>}
           <div>
@@ -93,22 +92,17 @@ export default function LoginPage() {
         </form>
         <div className="relative flex items-center justify-center my-2">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300"></div>
+            <div className="w-full border-t border-gray-300 dark:border-gray-700"></div>
           </div>
-          <div className="relative px-2 bg-white text-sm text-gray-500">ou</div>
+          <div className="relative px-2 bg-white dark:bg-gray-900 text-sm text-gray-500">ou</div>
         </div>
         <div className="space-y-3">
-            <button onClick={handleGoogleLogin} disabled={isLoading} className="w-full flex items-center justify-center gap-3 px-4 py-3 font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:bg-gray-100 transition-colors">
-                {/* <img src="/google-logo.svg" alt="Google" className="w-5 h-5" /> */}
+            <button onClick={handleGoogleLogin} disabled={isLoading} className="w-full flex items-center justify-center gap-3 px-4 py-3 font-semibold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:bg-gray-100 transition-colors">
                 <span>Entrar com Google</span>
             </button>
-            <Link to="/login-govbr" className="w-full flex items-center justify-center gap-3 px-4 py-3 font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:bg-gray-100 transition-colors">
-                {/* <img src="/govbr-logo.svg" alt="Gov.br" className="w-5 h-5" /> */}
-                <span>Acessar com gov.br</span>
-            </Link>
         </div>
-        <div className="text-center text-sm text-gray-600 mt-6">
-            Ainda não tem conta? <Link to="/register" className="font-medium text-indigo-600 hover:text-indigo-500">Criar primeiro acesso</Link>
+        <div className="text-center text-sm text-gray-600 dark:text-gray-400 mt-6">
+            Ainda não tem conta? <Link to="/register" className="font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500">Criar primeiro acesso</Link>
         </div>
       </div>
     </div>
