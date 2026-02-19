@@ -1,10 +1,13 @@
 "use client";
 
-import { PlusCircle, ShieldCheck, FileBarChart, History, TrendingUp } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { PlusCircle, ShieldCheck, FileBarChart, History, TrendingUp, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
+import { supabase } from '@/src/integrations/supabase/client';
+import { useUser } from '@/src/contexts/UserContext';
 
-const KpiCard = ({ title, value, change, delay = 0 }: { title: string; value: string; change?: string; delay?: number }) => (
+const KpiCard = ({ title, value, change, delay = 0, loading = false }: { title: string; value: string | number; change?: string; delay?: number; loading?: boolean }) => (
   <motion.div 
     initial={{ opacity: 0, scale: 0.95 }}
     animate={{ opacity: 1, scale: 1 }}
@@ -13,8 +16,12 @@ const KpiCard = ({ title, value, change, delay = 0 }: { title: string; value: st
   >
     <h3 className="text-xs font-black text-gray-400 uppercase tracking-wider">{title}</h3>
     <div className="flex items-baseline gap-2 mt-2">
-      <p className="text-3xl font-black text-gray-900">{value}</p>
-      {change && (
+      {loading ? (
+        <Loader2 className="w-6 h-6 animate-spin text-indigo-600" />
+      ) : (
+        <p className="text-3xl font-black text-gray-900">{value}</p>
+      )}
+      {change && !loading && (
         <span className="flex items-center text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md">
           <TrendingUp className="w-3 h-3 mr-1" />
           {change}
@@ -25,6 +32,54 @@ const KpiCard = ({ title, value, change, delay = 0 }: { title: string; value: st
 );
 
 export default function PainelPage() {
+  const { user } = useUser();
+  const [stats, setStats] = useState({
+    events: 0,
+    registrations: 0,
+    pendingLinks: 0,
+    certificates: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      setLoading(true);
+      
+      // 1. Contagem de Eventos
+      const { count: eventsCount } = await supabase
+        .from('events')
+        .select('*', { count: 'exact', head: true });
+
+      // 2. Contagem de Inscrições Totais
+      const { count: regCount } = await supabase
+        .from('event_registrations')
+        .select('*', { count: 'exact', head: true });
+
+      // 3. Contagem de Certificados Emitidos
+      const { count: certCount } = await supabase
+        .from('certificados')
+        .select('*', { count: 'exact', head: true });
+
+      // 4. Contagem de Vínculos Pendentes (Servidores que ainda não são organizadores)
+      const { count: pendingCount } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_type', 'servidor')
+        .eq('is_organizer', false);
+
+      setStats({
+        events: eventsCount || 0,
+        registrations: regCount || 0,
+        certificates: certCount || 0,
+        pendingLinks: pendingCount || 0
+      });
+      
+      setLoading(false);
+    };
+
+    fetchStats();
+  }, []);
+
   return (
     <div className="space-y-8">
       <header>
@@ -33,10 +88,10 @@ export default function PainelPage() {
       </header>
 
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard title="Eventos Publicados" value="12" change="+2" delay={0.1} />
-        <KpiCard title="Inscrições Totais" value="1.284" change="15%" delay={0.2} />
-        <KpiCard title="Vínculos Pendentes" value="08" delay={0.3} />
-        <KpiCard title="Certificados" value="732" delay={0.4} />
+        <KpiCard title="Eventos Publicados" value={stats.events} delay={0.1} loading={loading} />
+        <KpiCard title="Inscrições Totais" value={stats.registrations} delay={0.2} loading={loading} />
+        <KpiCard title="Vínculos Pendentes" value={stats.pendingLinks} delay={0.3} loading={loading} />
+        <KpiCard title="Certificados" value={stats.certificates} delay={0.4} loading={loading} />
       </section>
 
       <section>
