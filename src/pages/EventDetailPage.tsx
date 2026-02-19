@@ -91,6 +91,9 @@ export default function EventDetailPage() {
         tipo: 'evento',
         referenciaId: event.id,
       });
+    } else {
+      console.error('Erro na inscrição:', error);
+      alert('Erro ao realizar inscrição.');
     }
     setSubmitting(false);
   };
@@ -99,12 +102,18 @@ export default function EventDetailPage() {
     if (!user || !event) return;
     setSubmitting(true);
 
+    const validationCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+    
+    // Geramos um código base caso o trigger do banco não funcione como esperado
+    const fallbackCertCode = `SIGEA-${event.id.substring(0,4)}-${new Date().getFullYear().toString().slice(-2)}`;
+
     const { error } = await supabase
       .from('certificados')
       .insert({
         evento_id: event.id,
         user_id: user.id,
-        codigo_validacao: Math.random().toString(36).substring(2, 10).toUpperCase()
+        codigo_validacao: validationCode,
+        codigo_certificado: fallbackCertCode // Fornecendo valor para evitar erro de NOT NULL
       });
 
     if (!error) {
@@ -116,7 +125,8 @@ export default function EventDetailPage() {
       });
       alert('Certificado gerado! Você pode visualizá-lo na aba de Certificados.');
     } else {
-      alert('Erro ao gerar certificado.');
+      console.error('Erro ao gerar certificado:', error);
+      alert(`Erro ao gerar certificado: ${error.message}`);
     }
     setSubmitting(false);
   };
