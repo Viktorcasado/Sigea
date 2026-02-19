@@ -19,11 +19,12 @@ export default function CertificatesPage() {
     if (!user) return;
     setLoading(true);
 
+    // Alterado de 'eventos' para 'events' para bater com a estrutura do app
     const { data, error } = await supabase
       .from('certificados')
       .select(`
         *,
-        eventos (*)
+        events:evento_id (*)
       `)
       .eq('user_id', user.id);
 
@@ -34,17 +35,17 @@ export default function CertificatesPage() {
         eventoId: c.evento_id,
         codigo: c.codigo_certificado,
         dataEmissao: new Date(c.emitido_em),
-        event: {
-          id: c.eventos.id,
-          titulo: c.eventos.titulo,
+        event: c.events ? {
+          id: c.events.id,
+          titulo: c.events.title,
           instituicao: 'IFAL',
-          campus: c.eventos.campus,
-          dataInicio: new Date(c.eventos.data_inicio),
-          local: '',
-          descricao: '',
+          campus: c.events.campus,
+          dataInicio: new Date(c.events.date),
+          local: c.events.location || '',
+          descricao: c.events.description || '',
           modalidade: 'Presencial',
           status: 'publicado'
-        }
+        } : undefined
       }));
       setCertificates(formatted);
     }
@@ -148,14 +149,15 @@ export default function CertificatesPage() {
               className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4"
             >
               <div className="flex-1">
-                <h3 className="font-bold text-gray-900 text-lg">{cert.event?.titulo}</h3>
+                <h3 className="font-bold text-gray-900 text-lg">{cert.event?.titulo || 'Evento não encontrado'}</h3>
                 <p className="text-sm text-gray-500 font-mono mt-1">{cert.codigo}</p>
                 <p className="text-xs text-gray-400 mt-2">Emitido em {cert.dataEmissao.toLocaleDateString('pt-BR')}</p>
               </div>
               <div className="flex gap-2">
                 <button 
                   onClick={() => generatePdf(cert)}
-                  className="p-3 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors"
+                  disabled={!cert.event}
+                  className="p-3 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors disabled:opacity-50"
                   title="Baixar PDF"
                 >
                   <Download className="w-5 h-5" />
