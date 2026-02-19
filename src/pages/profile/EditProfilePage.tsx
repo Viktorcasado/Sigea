@@ -1,29 +1,37 @@
+"use client";
+
 import { useState } from 'react';
 import { useUser } from '@/src/contexts/UserContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Save, User } from 'lucide-react';
 
 export default function EditProfilePage() {
-  const { user } = useUser();
+  const { user, updateProfile } = useUser();
   const navigate = useNavigate();
+  
   const [nome, setNome] = useState(user?.nome || '');
   const [telefone, setTelefone] = useState(user?.telefone || '');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nome) {
-      alert('O nome completo é obrigatório.');
+      setError('O nome completo é obrigatório.');
       return;
     }
+
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      // updateUser({ nome, telefone }); // TODO: Implementar com Supabase
-      setIsLoading(false);
-      alert('Dados atualizados com sucesso!');
+    setError(null);
+    try {
+      await updateProfile({ nome, telefone });
+      alert('Perfil atualizado com sucesso!');
       navigate('/perfil');
-    }, 1000);
+    } catch (err: any) {
+      setError('Erro ao atualizar perfil. Tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -33,24 +41,77 @@ export default function EditProfilePage() {
         Voltar para o Perfil
       </Link>
 
-      <div className="bg-white p-6 rounded-2xl shadow-lg">
-        <h1 className="text-2xl font-bold text-gray-900">Editar Dados do Perfil</h1>
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <div>
-            <label htmlFor="nome" className="block text-sm font-medium text-gray-700">Nome completo</label>
-            <input type="text" id="nome" value={nome} onChange={(e) => setNome(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" />
+      <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
+        <div className="flex items-center gap-4 mb-8">
+          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
+            <User className="w-6 h-6" />
           </div>
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">E-mail</label>
-            <input type="email" id="email" value={user?.email || ''} readOnly className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-500" />
+            <h1 className="text-2xl font-bold text-gray-900">Editar Perfil</h1>
+            <p className="text-gray-500 text-sm">Mantenha seus dados sempre atualizados.</p>
           </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="telefone" className="block text-sm font-medium text-gray-700">Telefone (opcional)</label>
-            <input type="tel" id="telefone" value={telefone} onChange={(e) => setTelefone(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" />
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Nome Completo</label>
+            <input 
+              type="text" 
+              value={nome} 
+              onChange={(e) => setNome(e.target.value)} 
+              required 
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all"
+            />
           </div>
-          <button type="submit" disabled={isLoading} className="w-full px-4 py-2.5 text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400">
-            {isLoading ? 'Salvando...' : 'Salvar'}
-          </button>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">E-mail (Não alterável)</label>
+            <input 
+              type="email" 
+              value={user?.email || ''} 
+              readOnly 
+              className="w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl text-gray-500 cursor-not-allowed"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Telefone</label>
+            <input 
+              type="tel" 
+              value={telefone} 
+              onChange={(e) => setTelefone(e.target.value)} 
+              placeholder="(00) 00000-0000"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all"
+            />
+          </div>
+
+          {error && (
+            <div className="p-3 bg-red-50 text-red-600 text-sm rounded-xl text-center">
+              {error}
+            </div>
+          )}
+
+          <div className="flex gap-4 pt-4">
+            <button 
+              type="button" 
+              onClick={() => navigate('/perfil')}
+              className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-all"
+            >
+              Cancelar
+            </button>
+            <button 
+              type="submit" 
+              disabled={isLoading} 
+              className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2 disabled:bg-indigo-300"
+            >
+              {isLoading ? 'Salvando...' : (
+                <>
+                  <Save className="w-5 h-5" />
+                  Salvar Alterações
+                </>
+              )}
+            </button>
+          </div>
         </form>
       </div>
     </div>

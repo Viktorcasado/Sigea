@@ -6,8 +6,10 @@ import { User as SupabaseUser } from '@supabase/supabase-js';
 interface UserContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, metadata: any) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
+  updateProfile: (updates: Partial<User>) => Promise<void>;
   loading: boolean;
 }
 
@@ -27,23 +29,42 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
       
       if (error) {
         console.error('Erro ao buscar perfil:', error);
-        // Se o perfil não existir, podemos tentar criar um básico
         if (error.code === 'PGRST116') {
+           // Fallback para criar perfil se o trigger falhar ou não existir
            const { data: newProfile } = await supabase
             .from('profiles')
             .upsert({
               id: supabaseUser.id,
-              email: supabaseUser.email,
-              nome: supabaseUser.user_metadata.full_name || supabaseUser.email,
+              full_name: supabaseUser.user_metadata.full_name || '',
+              user_type: 'comunidade_externa'
             })
             .select()
             .single();
-           setUser(newProfile as User);
+           
+           // Mapeamento simples para o tipo User do frontend
+           setUser({
+             id: newProfile.id,
+             nome: newProfile.full_name,
+             email: supabaseUser.email || '',
+             perfil: newProfile.user_type || 'comunidade_externa',
+             status: 'ativo_comunidade',
+             cpf: ''
+           } as User);
         } else {
           setUser(null);
         }
       } else {
-        setUser(profile as User);
+        // Mapeamento do banco para o tipo do frontend
+        setUser({
+          id: profile.id,
+          nome: profile.full_name,
+          email: supabaseUser.email || '',
+          perfil: profile.user_type || 'comunidade_externa',
+          status: profile.is_organizer ? 'gestor' : 'ativo_comunidade',
+          campus: profile.campus,
+          matricula: profile.registration_number,
+          cpf: '' // CPF geralmente fica em tabela separada ou campo encriptado
+        } as User);
       }
     } else {
       setUser(null);
@@ -52,12 +73,10 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   };
 
   useEffect(() => {
-    // Verificar sessão inicial
     supabase.auth.getSession().then(({ data: { session } }) => {
       fetchProfile(session?.user ?? null);
     });
 
-    // Escutar mudanças na autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
         fetchProfile(session?.user ?? null);
@@ -67,9 +86,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
       }
     });
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -77,12 +94,21 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
     if (error) throw error;
   };
 
+  const signUp = async (email: string, password: string, metadata: any) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: metadata
+      }
+    });
+    if (error) throw error;
+  };
+
   const loginWithGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({ 
       provider: 'google',
-      options: {
-        redirectTo: window.location.origin
-      }
+      options: { redirectTo: window.location.origin }
     });
     if (error) throw error;
   };
@@ -92,8 +118,23 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
     if (error) throw error;
   };
 
+  const updateProfile = async (updates: Partial<User>) => {
+    if (!user) return;
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        full_name: updates.nome,
+        campus: updates.campus,
+        registration_number: updates.matricula
+      })
+      .eq('id', user.id);
+    
+    if (error) throw error;
+    setUser(prev => prev ? { ...prev, ...updates } : null);
+  };
+
   return (
-    <UserContext.Provider value={{ user, login, loginWithGoogle, logout, loading }}>
+    <UserContext.Provider value={{ user, login, signUp, loginWithGoogle, logout, updateProfile, loading }}>
       {children}
     </UserContext.Provider>
   );
@@ -101,8 +142,6 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
 
 export const useUser = () => {
   const context = useContext(UserContext);
-  if (context === undefined) {
-    throw new Error('useUser must be used within a UserProvider');
-  }
+  if (context === undefined) throw new Error('useUser must be used within a UserProvider');
   return context;
 };
