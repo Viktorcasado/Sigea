@@ -1,19 +1,67 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useUser } from '@/src/contexts/UserContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Save, User, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Save, User, Image as ImageIcon, Upload, Loader2 } from 'lucide-react';
+import { supabase } from '@/src/integrations/supabase/client';
 
 export default function EditProfilePage() {
   const { user, updateProfile } = useUser();
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [nome, setNome] = useState(user?.nome || '');
   const [telefone, setTelefone] = useState(user?.telefone || '');
   const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || '');
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validar tipo de arquivo
+    if (!file.type.startsWith('image/')) {
+      setError('Por favor, selecione uma imagem válida.');
+      return;
+    }
+
+    // Validar tamanho (ex: 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setError('A imagem deve ter no máximo 2MB.');
+      return;
+    }
+
+    setIsUploading(true);
+    setError(null);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      // Upload para o bucket 'profiles' (certifique-se que este bucket existe e é público)
+      const { error: uploadError } = await supabase.storage
+        .from('profiles')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Obter URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('profiles')
+        .getPublicUrl(filePath);
+
+      setAvatarUrl(publicUrl);
+    } catch (err: any) {
+      console.error('Erro no upload:', err);
+      setError('Erro ao subir imagem. Verifique se o bucket "profiles" existe no Supabase.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,33 +103,41 @@ export default function EditProfilePage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="flex flex-col items-center mb-6">
-            <div className="relative mb-4">
+            <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
               {avatarUrl ? (
                 <img 
                   src={avatarUrl} 
                   alt="Preview" 
-                  className="w-24 h-24 rounded-full object-cover border-4 border-indigo-50 shadow-md"
+                  className="w-32 h-32 rounded-full object-cover border-4 border-indigo-50 shadow-md transition-opacity group-hover:opacity-75"
                 />
               ) : (
-                <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center text-gray-400">
-                  <User className="w-12 h-12" />
+                <div className="w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 border-4 border-dashed border-gray-200 group-hover:border-indigo-300 transition-colors">
+                  <User className="w-16 h-16" />
+                </div>
+              )}
+              
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="bg-black/40 p-2 rounded-full text-white">
+                  <Upload className="w-6 h-6" />
+                </div>
+              </div>
+
+              {isUploading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white/60 rounded-full">
+                  <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
                 </div>
               )}
             </div>
-            <div className="w-full">
-              <label className="block text-sm font-semibold text-gray-700 mb-1">URL da Foto de Perfil</label>
-              <div className="relative">
-                <input 
-                  type="url" 
-                  value={avatarUrl} 
-                  onChange={(e) => setAvatarUrl(e.target.value)} 
-                  placeholder="https://exemplo.com/foto.jpg"
-                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all"
-                />
-                <ImageIcon className="absolute left-3 top-3.5 text-gray-400 w-5 h-5" />
-              </div>
-              <p className="text-[10px] text-gray-400 mt-1">Insira o link de uma imagem para usar como avatar.</p>
-            </div>
+            
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleFileChange} 
+              className="hidden" 
+              accept="image/*"
+            />
+            
+            <p className="text-xs text-gray-400 mt-3 font-medium">Clique na imagem para alterar sua foto</p>
           </div>
 
           <div>
@@ -132,7 +188,7 @@ export default function EditProfilePage() {
             </button>
             <button 
               type="submit" 
-              disabled={isLoading} 
+              disabled={isLoading || isUploading} 
               className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2 disabled:bg-indigo-300"
             >
               {isLoading ? 'Salvando...' : (
