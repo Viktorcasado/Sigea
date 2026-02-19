@@ -4,19 +4,47 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '@/src/contexts/UserContext';
 import { Event } from '@/src/types';
-import { mockEvents } from '@/src/data/mock';
+import { supabase } from '@/src/integrations/supabase/client';
 import { ArrowLeft, PlusCircle, Calendar, MapPin, Settings } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export default function MyEventsPage() {
   const { user } = useUser();
   const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simula a busca de eventos onde o usuário é o organizador
-    // No mock, vamos apenas mostrar alguns eventos
-    setEvents(mockEvents.slice(0, 2));
-  }, []);
+    const fetchMyEvents = async () => {
+      if (!user) return;
+      
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .eq('organizer_id', user.id)
+        .order('date', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao buscar eventos:', error);
+      } else {
+        const formattedEvents: Event[] = data.map(e => ({
+          id: e.id,
+          titulo: e.title,
+          descricao: e.description || '',
+          dataInicio: new Date(e.date),
+          local: e.location || '',
+          campus: e.campus || '',
+          instituicao: 'IFAL', // Valor padrão ou vindo do banco se houver
+          modalidade: 'Presencial', // Valor padrão
+          status: 'publicado', // Valor padrão
+          vagas: 0
+        }));
+        setEvents(formattedEvents);
+      }
+      setLoading(false);
+    };
+
+    fetchMyEvents();
+  }, [user]);
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
@@ -39,7 +67,11 @@ export default function MyEventsPage() {
         </Link>
       </div>
 
-      {events.length === 0 ? (
+      {loading ? (
+        <div className="flex justify-center py-20">
+          <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+        </div>
+      ) : events.length === 0 ? (
         <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
           <Calendar className="w-16 h-16 mx-auto text-gray-300 mb-4" />
           <h2 className="text-xl font-semibold text-gray-700">Você ainda não criou eventos</h2>
@@ -57,9 +89,7 @@ export default function MyEventsPage() {
             >
               <div className="p-6">
                 <div className="flex justify-between items-start mb-4">
-                  <span className={`text-xs font-black uppercase px-2 py-1 rounded-md ${
-                    event.status === 'publicado' ? 'bg-blue-50 text-blue-600' : 'bg-yellow-50 text-yellow-600'
-                  }`}>
+                  <span className="text-xs font-black uppercase px-2 py-1 rounded-md bg-blue-50 text-blue-600">
                     {event.status}
                   </span>
                   <Link to={`/evento/${event.id}/cronograma`} className="text-gray-400 hover:text-indigo-600">

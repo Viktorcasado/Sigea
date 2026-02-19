@@ -30,7 +30,6 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
       if (error) {
         console.error('Erro ao buscar perfil:', error);
         if (error.code === 'PGRST116') {
-           // Fallback para criar perfil se o trigger falhar ou não existir
            const { data: newProfile } = await supabase
             .from('profiles')
             .upsert({
@@ -41,29 +40,31 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
             .select()
             .single();
            
-           // Mapeamento simples para o tipo User do frontend
-           setUser({
-             id: newProfile.id,
-             nome: newProfile.full_name,
-             email: supabaseUser.email || '',
-             perfil: newProfile.user_type || 'comunidade_externa',
-             status: 'ativo_comunidade',
-             cpf: ''
-           } as User);
+           if (newProfile) {
+             setUser({
+               id: newProfile.id,
+               nome: newProfile.full_name,
+               email: supabaseUser.email || '',
+               perfil: newProfile.user_type || 'comunidade_externa',
+               status: 'ativo_comunidade',
+               is_organizer: false,
+               cpf: ''
+             } as User);
+           }
         } else {
           setUser(null);
         }
       } else {
-        // Mapeamento do banco para o tipo do frontend
         setUser({
           id: profile.id,
           nome: profile.full_name,
           email: supabaseUser.email || '',
           perfil: profile.user_type || 'comunidade_externa',
           status: profile.is_organizer ? 'gestor' : 'ativo_comunidade',
+          is_organizer: profile.is_organizer || false,
           campus: profile.campus,
           matricula: profile.registration_number,
-          cpf: '' // CPF geralmente fica em tabela separada ou campo encriptado
+          cpf: ''
         } as User);
       }
     } else {

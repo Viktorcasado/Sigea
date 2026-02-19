@@ -19,7 +19,8 @@ import {
   Info, 
   BookOpen,
   Bell,
-  Settings
+  Settings,
+  Users
 } from 'lucide-react';
 import ProfileHeader from '@/src/components/profile/ProfileHeader';
 import ProfileMenuItem from '@/src/components/profile/ProfileMenuItem';
@@ -40,40 +41,10 @@ export default function ProfilePage() {
   const renderAcademicMenu = () => {
     if (!user) return null;
     
-    if (user.perfil === 'gestor' || user.status === 'gestor') {
+    // Menu para Organizadores (Gestores ou Servidores com permissão)
+    if (user.is_organizer) {
       return (
-        <ProfileSection title="Gestão Institucional" delay={0.2}>
-          <ProfileMenuItem 
-            to="/gestor/painel" 
-            icon={LayoutDashboard} 
-            label="Painel Administrativo" 
-            description="Visão geral e estatísticas"
-          />
-          <ProfileMenuItem 
-            to="/gestor/eventos" 
-            icon={Calendar} 
-            label="Eventos da Unidade" 
-            description="Gerenciar todos os eventos"
-          />
-          <ProfileMenuItem 
-            to="/gestor/vinculos" 
-            icon={ShieldCheck} 
-            label="Validar Vínculos" 
-            description="Aprovar novos membros"
-          />
-          <ProfileMenuItem 
-            to="/gestor/relatorios" 
-            icon={FileBarChart} 
-            label="Relatórios e Dados" 
-            description="Exportar planilhas e PDFs"
-          />
-        </ProfileSection>
-      );
-    }
-
-    if (user.perfil === 'servidor') {
-      return (
-        <ProfileSection title="Organização" delay={0.2}>
+        <ProfileSection title="Gestão de Eventos" delay={0.2}>
           <ProfileMenuItem 
             to="/evento/criar" 
             icon={PlusCircle} 
@@ -84,19 +55,25 @@ export default function ProfilePage() {
             to="/perfil/meus-eventos" 
             icon={Calendar} 
             label="Meus Eventos" 
-            description="Gerenciar cronogramas"
+            description="Gerenciar cronogramas e detalhes"
+          />
+          <ProfileMenuItem 
+            to="/perfil/inscritos" 
+            icon={Users} 
+            label="Lista de Inscritos" 
+            description="Ver participantes por evento"
           />
           <ProfileMenuItem 
             to="/perfil/marcar-presenca" 
             icon={Clock} 
             label="Controle de Presença" 
-            description="Validar via QR Code"
+            description="Validar via QR Code ou Lista"
           />
         </ProfileSection>
       );
     }
 
-    // Aluno e Comunidade
+    // Menu para Alunos e Comunidade
     return (
       <ProfileSection title="Minha Participação" delay={0.2}>
         <ProfileMenuItem 

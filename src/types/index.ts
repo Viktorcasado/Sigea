@@ -13,6 +13,7 @@ export interface User {
   campus?: string;
   perfil: UserProfile;
   status: UserStatus;
+  is_organizer: boolean;
 }
 
 export type EventStatus = 'rascunho' | 'publicado' | 'encerrado';
@@ -31,6 +32,7 @@ export interface Event {
   local: string;
   descricao: string;
   status: EventStatus;
+  organizer_id?: string;
 }
 
 export type ActivityType = 'palestra' | 'oficina' | 'minicurso' | 'mesa_redonda' | 'seminario' | 'outro';
@@ -39,8 +41,9 @@ export interface Inscricao {
   id: string;
   eventoId: string;
   userId: string;
-  status: 'inscrito' | 'cancelado';
+  status: 'inscrito' | 'cancelado' | 'confirmada';
   createdAt: Date;
+  event?: Event;
 }
 
 export type VinculoStatus = 'pendente' | 'aprovado' | 'rejeitado';
