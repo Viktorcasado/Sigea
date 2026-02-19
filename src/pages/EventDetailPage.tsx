@@ -6,7 +6,7 @@ import { useNotifications } from '@/src/contexts/NotificationContext';
 import { useUser } from '@/src/contexts/UserContext';
 import { supabase } from '@/src/integrations/supabase/client';
 import { Event } from '@/src/types';
-import { ArrowLeft, Share2, Calendar, MapPin, Award, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Share2, Calendar, MapPin, Award, CheckCircle, Clock } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export default function EventDetailPage() {
@@ -17,9 +17,11 @@ export default function EventDetailPage() {
   
   const [event, setEvent] = useState<Event | null>(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [registrationDate, setRegistrationDate] = useState<Date | null>(null);
   const [hasCertificate, setHasCertificate] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
     const fetchEventData = async () => {
@@ -48,12 +50,15 @@ export default function EventDetailPage() {
         if (user) {
           const { data: regData } = await supabase
             .from('event_registrations')
-            .select('id')
+            .select('id, registered_at')
             .eq('event_id', id)
             .eq('user_id', user.id)
             .maybeSingle();
           
-          if (regData) setIsSubscribed(true);
+          if (regData) {
+            setIsSubscribed(true);
+            setRegistrationDate(new Date(regData.registered_at));
+          }
 
           const { data: certData } = await supabase
             .from('certificados')
@@ -71,23 +76,47 @@ export default function EventDetailPage() {
     fetchEventData();
   }, [id, user]);
 
+  // Timer para atualizar o tempo restante a cada minuto
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 10000); // Atualiza a cada 10 segundos para precisão visual
+    return () => clearInterval(timer);
+  }, []);
+
+  const getMinutesRemaining = () => {
+    if (!registrationDate) return 0;
+    const diffMs = currentTime.getTime() - registrationDate.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    return Math.max(0, 10 - diffMins);
+  };
+
+  const canIssueCertificate = () => {
+    if (!registrationDate) return false;
+    const diffMs = currentTime.getTime() - registrationDate.getTime();
+    return diffMs >= 10 * 60 * 1000; // 10 minutos em milissegundos
+  };
+
   const handleSubscription = async () => {
     if (!user || !event) return;
     setSubmitting(true);
 
+    const now = new Date();
     const { error } = await supabase
       .from('event_registrations')
       .insert({
         event_id: event.id,
         user_id: user.id,
-        status: 'confirmada'
+        status: 'confirmada',
+        registered_at: now.toISOString()
       });
 
     if (!error) {
       setIsSubscribed(true);
+      setRegistrationDate(now);
       addNotification({
         titulo: 'Inscrição Realizada',
-        mensagem: `Sua vaga no evento "${event.titulo}" está garantida!`,
+        mensagem: `Sua vaga no evento "${event.titulo}" está garantida! O certificado estará disponível em 10 minutos.`,
         tipo: 'evento',
         referenciaId: event.id,
       });
@@ -99,12 +128,10 @@ export default function EventDetailPage() {
   };
 
   const handleIssueCertificate = async () => {
-    if (!user || !event) return;
+    if (!user || !event || !canIssueCertificate()) return;
     setSubmitting(true);
 
     const validationCode = Math.random().toString(36).substring(2, 10).toUpperCase();
-    
-    // Geramos um código base caso o trigger do banco não funcione como esperado
     const fallbackCertCode = `SIGEA-${event.id.substring(0,4)}-${new Date().getFullYear().toString().slice(-2)}`;
 
     const { error } = await supabase
@@ -113,7 +140,7 @@ export default function EventDetailPage() {
         evento_id: event.id,
         user_id: user.id,
         codigo_validacao: validationCode,
-        codigo_certificado: fallbackCertCode // Fornecendo valor para evitar erro de NOT NULL
+        codigo_certificado: fallbackCertCode
       });
 
     if (!error) {
@@ -133,6 +160,8 @@ export default function EventDetailPage() {
 
   if (loading) return <div className="flex justify-center py-20"><div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div></div>;
   if (!event) return <div className="text-center py-20"><h2 className="text-2xl font-bold">Evento não encontrado</h2></div>;
+
+  const minutesLeft = getMinutesRemaining();
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -187,6 +216,14 @@ export default function EventDetailPage() {
                     <Award className="w-5 h-5" />
                     Ver Certificado
                 </Link>
+            ) : !canIssueCertificate() ? (
+                <div className="flex-1 flex flex-col items-center justify-center p-4 bg-amber-50 border border-amber-100 rounded-2xl">
+                    <div className="flex items-center gap-2 text-amber-700 font-bold mb-1">
+                        <Clock className="w-5 h-5" />
+                        Certificado em processamento
+                    </div>
+                    <p className="text-xs text-amber-600">Disponível em aproximadamente {minutesLeft} {minutesLeft === 1 ? 'minuto' : 'minutos'}</p>
+                </div>
             ) : (
                 <button 
                     onClick={handleIssueCertificate}
