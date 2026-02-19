@@ -11,7 +11,6 @@ import ExplorePage from './pages/ExplorePage';
 import CertificatesPage from './pages/CertificatesPage';
 import ValidateCertificatePage from './pages/ValidateCertificatePage';
 import EventDetailPage from './pages/EventDetailPage';
-import PlaceholderPage from './pages/PlaceholderPage';
 import ProfilePage from './pages/ProfilePage';
 import EditProfilePage from './pages/profile/EditProfilePage';
 import InstitutionPage from './pages/profile/InstitutionPage';
@@ -53,11 +52,18 @@ function AppRoutes() {
   const { user, loading } = useUser();
 
   if (loading) {
-    return <div>Carregando...</div>; // Ou um componente de spinner mais elaborado
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+      </div>
+    );
   }
 
   return (
     <Routes>
+      {/* Rotas Públicas (Acessíveis sem login) */}
+      <Route path="/validar-certificado" element={<ValidateCertificatePage />} />
+      
       {!user ? (
         <>
           <Route path="/login" element={<LoginPage />} />
@@ -74,11 +80,13 @@ function AppRoutes() {
             <Route path="certificados" element={<CertificatesPage />} />
             <Route path="perfil" element={<ProfilePage />} />
           </Route>
+          
           <Route path="/perfil/editar" element={<EditProfilePage />} />
           <Route path="/perfil/instituicao-campus" element={<InstitutionPage />} />
           <Route path="/perfil/documentos" element={<DocumentsPage />} />
           <Route path="/perfil/seguranca" element={<SecurityPage />} />
           <Route path="/perfil/eventos-inscritos" element={<div className='bg-gray-50 min-h-screen font-sans'><UserInscriptionsPage /></div>} />
+          
           <Route path="/sistema/politicas" element={<PoliciesPage />} />
           <Route path="/sistema/termos" element={<TermsPage />} />
           <Route path="/sistema/sobre" element={<AboutPage />} />
@@ -96,7 +104,6 @@ function AppRoutes() {
 
           <Route path="/evento/:id" element={<div className='bg-gray-50 min-h-screen font-sans'><div className='max-w-4xl mx-auto p-4'><EventDetailPage /></div></div>} />
           <Route path="/notificacoes" element={<NotificationsPage />} />
-          <Route path="/validar-certificado" element={<ValidateCertificatePage />} />
           <Route path="/acesso-restrito" element={<RestrictedAccessPage />} />
 
           <Route element={<ProtectedRoute allowedProfiles={['servidor', 'gestor', 'admin']} />}>
