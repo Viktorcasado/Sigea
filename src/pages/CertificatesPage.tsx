@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BadgeCheck, Download, Copy, Award } from 'lucide-react';
+import { BadgeCheck, Download, Copy, Award, Plus } from 'lucide-react';
 import { useUser } from '@/src/contexts/UserContext';
 import { supabase } from '@/src/integrations/supabase/client';
 import { Certificate } from '@/src/types';
@@ -14,45 +14,81 @@ export default function CertificatesPage() {
   const { user } = useUser();
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
+
+  const fetchCertificates = async () => {
+    if (!user) return;
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from('certificados')
+      .select(`
+        *,
+        eventos (*)
+      `)
+      .eq('user_id', user.id);
+
+    if (!error && data) {
+      const formatted: Certificate[] = data.map(c => ({
+        id: c.id,
+        userId: c.user_id,
+        eventoId: c.evento_id,
+        codigo: c.codigo_certificado,
+        dataEmissao: new Date(c.emitido_em),
+        event: {
+          id: c.eventos.id,
+          titulo: c.eventos.titulo,
+          instituicao: 'IFAL',
+          campus: c.eventos.campus,
+          dataInicio: new Date(c.eventos.data_inicio),
+          local: '',
+          descricao: '',
+          modalidade: 'Presencial',
+          status: 'publicado'
+        }
+      }));
+      setCertificates(formatted);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const fetchCertificates = async () => {
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('certificados')
-        .select(`
-          *,
-          eventos (*)
-        `)
-        .eq('user_id', user.id);
-
-      if (!error && data) {
-        const formatted: Certificate[] = data.map(c => ({
-          id: c.id,
-          userId: c.user_id,
-          eventoId: c.evento_id,
-          codigo: c.codigo_certificado,
-          dataEmissao: new Date(c.emitido_em),
-          event: {
-            id: c.eventos.id,
-            titulo: c.eventos.titulo,
-            instituicao: 'IFAL',
-            campus: c.eventos.campus,
-            dataInicio: new Date(c.eventos.data_inicio),
-            local: '',
-            descricao: '',
-            modalidade: 'Presencial',
-            status: 'publicado'
-          }
-        }));
-        setCertificates(formatted);
-      }
-      setLoading(false);
-    };
-
     fetchCertificates();
   }, [user]);
+
+  const createTestCertificate = async () => {
+    if (!user) return;
+    setIsCreating(true);
+
+    try {
+      // 1. Buscar o primeiro evento disponível para vincular o certificado
+      const { data: events } = await supabase.from('events').select('id').limit(1);
+      
+      if (!events || events.length === 0) {
+        alert('Crie pelo menos um evento antes de gerar um certificado de teste.');
+        return;
+      }
+
+      const eventId = events[0].id;
+
+      // 2. Inserir o certificado de teste
+      const { error } = await supabase.from('certificados').insert({
+        user_id: user.id,
+        evento_id: eventId,
+        codigo_validacao: Math.random().toString(36).substring(2, 10).toUpperCase()
+      });
+
+      if (error) throw error;
+
+      alert('Certificado de teste gerado com sucesso!');
+      fetchCertificates();
+    } catch (error: any) {
+      console.error('Erro ao criar certificado:', error);
+      alert('Erro ao criar certificado: ' + error.message);
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   const generatePdf = async (cert: Certificate) => {
     if (!cert.event) return;
@@ -62,11 +98,9 @@ export default function CertificatesPage() {
     // Fundo e Bordas
     doc.setFillColor(255, 255, 255);
     doc.rect(0, 0, 297, 210, 'F');
-    doc.setDrawColor(79, 70, 229); // Indigo-600
+    doc.setDrawColor(79, 70, 229);
     doc.setLineWidth(2);
     doc.rect(10, 10, 277, 190);
-    doc.setLineWidth(0.5);
-    doc.rect(12, 12, 273, 186);
     
     // Cabeçalho
     doc.setFontSize(12);
@@ -98,31 +132,32 @@ export default function CertificatesPage() {
     doc.text(`participou com êxito do evento "${cert.event.titulo}"`, 148.5, 130, { align: 'center' });
     doc.text(`realizado em ${cert.event.dataInicio.toLocaleDateString('pt-BR')} no campus ${cert.event.campus}.`, 148.5, 140, { align: 'center' });
 
-    // QR Code e Validação
+    // QR Code
     const qrCodeDataUrl = await QRCode.toDataURL(validationUrl);
     doc.addImage(qrCodeDataUrl, 'PNG', 20, 155, 35, 35);
     
     doc.setFontSize(9);
     doc.setTextColor(150, 150, 150);
-    doc.text('Para validar este documento, aponte a câmera para o QR Code', 60, 170);
-    doc.text(`ou acesse o portal de validação com o código: ${cert.codigo}`, 60, 175);
-
-    // Assinatura Simbólica
-    doc.setDrawColor(200, 200, 200);
-    doc.line(180, 175, 260, 175);
-    doc.setFontSize(10);
-    doc.setTextColor(100, 100, 100);
-    doc.text('Coordenação de Eventos', 220, 182, { align: 'center' });
-    doc.text('SIGEA - Plataforma Unificada', 220, 187, { align: 'center' });
+    doc.text(`Código de Validação: ${cert.codigo}`, 60, 175);
 
     doc.save(`certificado-${cert.codigo}.pdf`);
   };
 
   return (
     <div className="space-y-8">
-      <header>
-        <h1 className="text-3xl font-black text-gray-900">Certificados</h1>
-        <p className="text-gray-500 mt-1">Seus documentos de participação acadêmica</p>
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-gray-900">Certificados</h1>
+          <p className="text-gray-500 mt-1">Seus documentos de participação acadêmica</p>
+        </div>
+        <button 
+          onClick={createTestCertificate}
+          disabled={isCreating}
+          className="flex items-center gap-2 bg-emerald-600 text-white font-bold px-4 py-2 rounded-xl hover:bg-emerald-700 transition-all disabled:bg-emerald-300"
+        >
+          <Plus className="w-5 h-5" />
+          {isCreating ? 'Gerando...' : 'Gerar Certificado Teste'}
+        </button>
       </header>
 
       <Link to="/validar-certificado" className="flex items-center justify-center gap-3 w-full bg-indigo-600 text-white font-bold px-6 py-4 rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
@@ -137,7 +172,7 @@ export default function CertificatesPage() {
           <div className="text-center py-20 bg-white rounded-3xl border border-gray-100">
             <Award className="w-16 h-16 mx-auto text-gray-200 mb-4" />
             <h3 className="text-xl font-bold text-gray-700">Nenhum certificado ainda</h3>
-            <p className="text-gray-500 mt-2">Participe de eventos para receber seus certificados aqui.</p>
+            <p className="text-gray-500 mt-2">Clique no botão acima para gerar um certificado de teste.</p>
           </div>
         ) : (
           certificates.map((cert, index) => (
