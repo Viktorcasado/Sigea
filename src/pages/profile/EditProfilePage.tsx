@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useUser } from '@/src/contexts/UserContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Save, User } from 'lucide-react';
+import { ArrowLeft, Save, User, Image as ImageIcon } from 'lucide-react';
 
 export default function EditProfilePage() {
   const { user, updateProfile } = useUser();
@@ -11,6 +11,7 @@ export default function EditProfilePage() {
   
   const [nome, setNome] = useState(user?.nome || '');
   const [telefone, setTelefone] = useState(user?.telefone || '');
+  const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || '');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,7 +25,7 @@ export default function EditProfilePage() {
     setIsLoading(true);
     setError(null);
     try {
-      await updateProfile({ nome, telefone });
+      await updateProfile({ nome, telefone, avatar_url: avatarUrl });
       alert('Perfil atualizado com sucesso!');
       navigate('/perfil');
     } catch (err: any) {
@@ -53,6 +54,36 @@ export default function EditProfilePage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="flex flex-col items-center mb-6">
+            <div className="relative mb-4">
+              {avatarUrl ? (
+                <img 
+                  src={avatarUrl} 
+                  alt="Preview" 
+                  className="w-24 h-24 rounded-full object-cover border-4 border-indigo-50 shadow-md"
+                />
+              ) : (
+                <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center text-gray-400">
+                  <User className="w-12 h-12" />
+                </div>
+              )}
+            </div>
+            <div className="w-full">
+              <label className="block text-sm font-semibold text-gray-700 mb-1">URL da Foto de Perfil</label>
+              <div className="relative">
+                <input 
+                  type="url" 
+                  value={avatarUrl} 
+                  onChange={(e) => setAvatarUrl(e.target.value)} 
+                  placeholder="https://exemplo.com/foto.jpg"
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all"
+                />
+                <ImageIcon className="absolute left-3 top-3.5 text-gray-400 w-5 h-5" />
+              </div>
+              <p className="text-[10px] text-gray-400 mt-1">Insira o link de uma imagem para usar como avatar.</p>
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">Nome Completo</label>
             <input 

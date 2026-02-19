@@ -48,7 +48,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
                perfil: newProfile.user_type || 'comunidade_externa',
                status: 'ativo_comunidade',
                is_organizer: false,
-               cpf: ''
+               avatar_url: newProfile.avatar_url
              } as User);
            }
         } else {
@@ -64,7 +64,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
           is_organizer: profile.is_organizer || false,
           campus: profile.campus,
           matricula: profile.registration_number,
-          cpf: ''
+          avatar_url: profile.avatar_url
         } as User);
       }
     } else {
@@ -126,7 +126,8 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
       .update({
         full_name: updates.nome,
         campus: updates.campus,
-        registration_number: updates.matricula
+        registration_number: updates.matricula,
+        avatar_url: updates.avatar_url
       })
       .eq('id', user.id);
     

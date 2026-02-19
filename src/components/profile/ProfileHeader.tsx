@@ -42,9 +42,17 @@ const ProfileHeader = ({ user }: ProfileHeaderProps) => {
       className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center text-center sm:flex-row sm:text-left sm:items-center gap-6"
     >
       <div className="relative">
-        <div className="w-24 h-24 bg-linear-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-3xl font-extrabold shadow-lg">
-          {getInitials(user.nome)}
-        </div>
+        {user.avatar_url ? (
+          <img 
+            src={user.avatar_url} 
+            alt={user.nome} 
+            className="w-24 h-24 rounded-full object-cover shadow-lg border-4 border-white"
+          />
+        ) : (
+          <div className="w-24 h-24 bg-linear-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-3xl font-extrabold shadow-lg">
+            {getInitials(user.nome)}
+          </div>
+        )}
         <div className="absolute -bottom-1 -right-1 bg-white p-1 rounded-full shadow-sm">
           <div className="w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
         </div>
