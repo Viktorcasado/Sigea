@@ -6,6 +6,11 @@
   body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    @apply bg-gray-50 text-gray-900 transition-colors duration-200;
+  }
+
+  .dark body {
+    @apply bg-gray-950 text-gray-100;
   }
 }
 
@@ -27,3 +32,6 @@
     border-radius: 20px;
 }
 
+.dark .overflow-x-auto::-webkit-scrollbar-thumb {
+    background-color: #374151; /* gray-700 */
+}
