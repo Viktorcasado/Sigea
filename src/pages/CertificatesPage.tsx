@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BadgeCheck, Download, Copy, Award, Plus } from 'lucide-react';
+import { BadgeCheck, Download, Copy, Award, Search } from 'lucide-react';
 import { useUser } from '@/src/contexts/UserContext';
 import { supabase } from '@/src/integrations/supabase/client';
 import { Certificate } from '@/src/types';
@@ -14,7 +14,6 @@ export default function CertificatesPage() {
   const { user } = useUser();
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isCreating, setIsCreating] = useState(false);
 
   const fetchCertificates = async () => {
     if (!user) return;
@@ -55,40 +54,6 @@ export default function CertificatesPage() {
   useEffect(() => {
     fetchCertificates();
   }, [user]);
-
-  const createTestCertificate = async () => {
-    if (!user) return;
-    setIsCreating(true);
-
-    try {
-      // 1. Buscar o primeiro evento disponível para vincular o certificado
-      const { data: events } = await supabase.from('events').select('id').limit(1);
-      
-      if (!events || events.length === 0) {
-        alert('Crie pelo menos um evento antes de gerar um certificado de teste.');
-        return;
-      }
-
-      const eventId = events[0].id;
-
-      // 2. Inserir o certificado de teste
-      const { error } = await supabase.from('certificados').insert({
-        user_id: user.id,
-        evento_id: eventId,
-        codigo_validacao: Math.random().toString(36).substring(2, 10).toUpperCase()
-      });
-
-      if (error) throw error;
-
-      alert('Certificado de teste gerado com sucesso!');
-      fetchCertificates();
-    } catch (error: any) {
-      console.error('Erro ao criar certificado:', error);
-      alert('Erro ao criar certificado: ' + error.message);
-    } finally {
-      setIsCreating(false);
-    }
-  };
 
   const generatePdf = async (cert: Certificate) => {
     if (!cert.event) return;
@@ -145,34 +110,33 @@ export default function CertificatesPage() {
 
   return (
     <div className="space-y-8">
-      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-gray-900">Certificados</h1>
-          <p className="text-gray-500 mt-1">Seus documentos de participação acadêmica</p>
-        </div>
-        <button 
-          onClick={createTestCertificate}
-          disabled={isCreating}
-          className="flex items-center gap-2 bg-emerald-600 text-white font-bold px-4 py-2 rounded-xl hover:bg-emerald-700 transition-all disabled:bg-emerald-300"
-        >
-          <Plus className="w-5 h-5" />
-          {isCreating ? 'Gerando...' : 'Gerar Certificado Teste'}
-        </button>
+      <header>
+        <h1 className="text-3xl font-black text-gray-900">Certificados</h1>
+        <p className="text-gray-500 mt-1">Seus documentos de participação acadêmica</p>
       </header>
 
-      <Link to="/validar-certificado" className="flex items-center justify-center gap-3 w-full bg-indigo-600 text-white font-bold px-6 py-4 rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
-        <BadgeCheck className="w-6 h-6" />
-        Validar um certificado
-      </Link>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Link to="/validar-certificado" className="flex items-center justify-center gap-3 bg-indigo-600 text-white font-bold px-6 py-4 rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
+          <BadgeCheck className="w-6 h-6" />
+          Validar certificado
+        </Link>
+        <Link to="/explorar" className="flex items-center justify-center gap-3 bg-white border border-gray-200 text-gray-700 font-bold px-6 py-4 rounded-2xl hover:bg-gray-50 transition-all">
+          <Search className="w-6 h-6" />
+          Buscar eventos
+        </Link>
+      </div>
 
       <main className="space-y-4">
         {loading ? (
-          [1, 2].map(i => <div key={i} className="h-32 bg-gray-100 animate-pulse rounded-2xl" />)
+          [1, 2, 3].map(i => <div key={i} className="h-32 bg-gray-100 animate-pulse rounded-2xl" />)
         ) : certificates.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-3xl border border-gray-100">
             <Award className="w-16 h-16 mx-auto text-gray-200 mb-4" />
             <h3 className="text-xl font-bold text-gray-700">Nenhum certificado ainda</h3>
-            <p className="text-gray-500 mt-2">Clique no botão acima para gerar um certificado de teste.</p>
+            <p className="text-gray-500 mt-2">Inscreva-se em eventos e participe para emitir seus certificados.</p>
+            <Link to="/explorar" className="mt-6 inline-block text-indigo-600 font-bold hover:underline">
+              Explorar eventos agora
+            </Link>
           </div>
         ) : (
           certificates.map((cert, index) => (
