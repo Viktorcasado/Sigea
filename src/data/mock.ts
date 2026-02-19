@@ -23,14 +23,6 @@ export const mockUsers: User[] = [
     perfil: 'aluno',
     status: 'ativo_vinculado',
   },
-  {
-    id: 'user003',
-    nome: 'Ana Costa (Comunidade)',
-    email: 'ana.costa@email.com',
-    cpf: '555.666.777-88',
-    perfil: 'comunidade_externa',
-    status: 'ativo_comunidade',
-  },
 ];
 
 export const mockUser: User = mockUsers[0];

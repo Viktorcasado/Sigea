@@ -3,7 +3,6 @@ import { mockUsers } from '@/src/data/mock';
 
 const mockInscricoesDB: Inscricao[] = [
   { id: 'ins01', eventoId: 'evt02', userId: mockUsers[1].id, status: 'inscrito', createdAt: new Date() },
-  { id: 'ins02', eventoId: 'evt03', userId: mockUsers[2].id, status: 'inscrito', createdAt: new Date() },
 ];
 
 export const InscricaoRepositoryMock = {
