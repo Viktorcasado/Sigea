@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { UserProvider, useUser } from './contexts/UserContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import Layout from './components/Layout';
@@ -19,6 +19,8 @@ import SecurityPage from './pages/profile/SecurityPage';
 import UserInscriptionsPage from './pages/profile/UserInscriptionsPage';
 import UserPresencesPage from './pages/profile/UserPresencesPage';
 import MyEventsPage from './pages/profile/MyEventsPage';
+import InscritosPage from './pages/profile/InscritosPage';
+import MarcarPresencaPage from './pages/profile/MarcarPresencaPage';
 import GestorLayout from './pages/gestor/GestorLayout';
 import PainelPage from './pages/gestor/PainelPage';
 import GestorEventosPage from './pages/gestor/GestorEventosPage';
@@ -63,7 +65,7 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* Rotas Públicas (Acessíveis sem login) */}
+      {/* Rotas Públicas */}
       <Route path="/validar-certificado" element={<ValidateCertificatePage />} />
       
       {!user ? (
@@ -72,7 +74,7 @@ function AppRoutes() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/login-govbr" element={<LoginGovBrPage />} />
-          <Route path="*" element={<LoginPage />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </>
       ) : (
         <>
@@ -90,6 +92,8 @@ function AppRoutes() {
           <Route path="/perfil/eventos-inscritos" element={<div className='bg-gray-50 min-h-screen font-sans'><UserInscriptionsPage /></div>} />
           <Route path="/perfil/presencas" element={<div className='bg-gray-50 min-h-screen font-sans'><UserPresencesPage /></div>} />
           <Route path="/perfil/meus-eventos" element={<div className='bg-gray-50 min-h-screen font-sans'><MyEventsPage /></div>} />
+          <Route path="/perfil/inscritos" element={<div className='bg-gray-50 min-h-screen font-sans'><InscritosPage /></div>} />
+          <Route path="/perfil/marcar-presenca" element={<div className='bg-gray-50 min-h-screen font-sans'><MarcarPresencaPage /></div>} />
           
           <Route path="/sistema/politicas" element={<PoliciesPage />} />
           <Route path="/sistema/termos" element={<TermsPage />} />
@@ -117,6 +121,9 @@ function AppRoutes() {
             <Route path="/evento/:id/atividades/criar" element={<div className='bg-gray-50 min-h-screen font-sans'><ActivityFormPage /></div>} />
             <Route path="/evento/:id/atividades/:activityId/editar" element={<div className='bg-gray-50 min-h-screen font-sans'><ActivityFormPage /></div>} />
           </Route>
+
+          {/* Fallback para usuários logados */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </>
       )}
     </Routes>
