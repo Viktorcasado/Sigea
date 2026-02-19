@@ -4,8 +4,7 @@ import { useState } from 'react';
 import { useUser } from '@/src/contexts/UserContext';
 import { useNotifications } from '@/src/contexts/NotificationContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Building2, GraduationCap } from 'lucide-center';
-import { Building2 as BuildingIcon, GraduationCap as GradIcon } from 'lucide-react';
+import { ArrowLeft, Building2 as BuildingIcon, GraduationCap as GradIcon, ShieldCheck } from 'lucide-react';
 import { EventInstitution, UserProfile } from '@/src/types';
 
 export default function InstitutionPage() {
@@ -24,7 +23,7 @@ export default function InstitutionPage() {
     setIsLoading(true);
     
     try {
-      // Se for servidor, ganha status de organizador automaticamente para fins de demonstração
+      // Servidores e Gestores são marcados como organizadores
       const isOrganizer = perfil === 'servidor' || perfil === 'gestor';
 
       await updateProfile({ 
@@ -38,15 +37,14 @@ export default function InstitutionPage() {
 
       addNotification({
         titulo: 'Vínculo Atualizado',
-        mensagem: 'Seus dados institucionais foram salvos com sucesso.',
+        mensagem: `Seu perfil agora está vinculado como ${perfil} no ${instituicao}.`,
         tipo: 'vinculo',
       });
       
-      alert('Vínculo atualizado com sucesso!');
       navigate('/perfil');
     } catch (error) {
       console.error('Erro ao atualizar vínculo:', error);
-      alert('Erro ao atualizar vínculo.');
+      alert('Erro ao atualizar vínculo. Tente novamente.');
     } finally {
       setIsLoading(false);
     }
@@ -66,22 +64,37 @@ export default function InstitutionPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Vínculo Institucional</h1>
-            <p className="text-gray-500 text-sm">Informe seus dados acadêmicos ou profissionais.</p>
+            <p className="text-gray-500 text-sm">Informe seus dados acadêmicos ou profissionais para validar seu acesso.</p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Instituição</label>
-            <select 
-              value={instituicao} 
-              onChange={(e) => setInstituicao(e.target.value as EventInstitution)}
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all"
-            >
-              <option value="IFAL">IFAL</option>
-              <option value="UFAL">UFAL</option>
-              <option value="Comunidade">Outra / Comunidade</option>
-            </select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Instituição</label>
+              <select 
+                value={instituicao} 
+                onChange={(e) => setInstituicao(e.target.value as EventInstitution)}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all"
+              >
+                <option value="IFAL">IFAL</option>
+                <option value="UFAL">UFAL</option>
+                <option value="Comunidade">Outra / Comunidade</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Tipo de Vínculo</label>
+              <select 
+                value={perfil} 
+                onChange={(e) => setPerfil(e.target.value as UserProfile)}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all"
+              >
+                <option value="aluno">Aluno</option>
+                <option value="servidor">Servidor (Docente/Técnico)</option>
+                <option value="comunidade_externa">Comunidade Externa</option>
+              </select>
+            </div>
           </div>
 
           <div>
@@ -90,37 +103,37 @@ export default function InstitutionPage() {
               type="text" 
               value={campus} 
               onChange={(e) => setCampus(e.target.value)} 
-              placeholder="Ex: Maceió, Arapiraca..."
+              placeholder="Ex: Maceió, Arapiraca, Palmeira dos Índios..."
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all"
+              required
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Tipo de Vínculo</label>
-            <select 
-              value={perfil} 
-              onChange={(e) => setPerfil(e.target.value as UserProfile)}
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all"
-            >
-              <option value="aluno">Aluno</option>
-              <option value="servidor">Servidor (Docente/Técnico)</option>
-              <option value="comunidade_externa">Comunidade Externa</option>
-            </select>
           </div>
 
           {perfil !== 'comunidade_externa' && (
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Matrícula ou SIAPE</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                {perfil === 'servidor' ? 'SIAPE' : 'Matrícula'}
+              </label>
               <div className="relative">
                 <input 
                   type="text" 
                   value={matricula} 
                   onChange={(e) => setMatricula(e.target.value)} 
-                  placeholder="Digite seu número de identificação"
+                  placeholder={perfil === 'servidor' ? "Digite seu SIAPE" : "Digite sua matrícula"}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all"
+                  required
                 />
                 <GradIcon className="absolute right-4 top-3.5 text-gray-400 w-5 h-5" />
               </div>
+            </div>
+          )}
+
+          {perfil === 'servidor' && (
+            <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl flex gap-3">
+              <ShieldCheck className="w-5 h-5 text-amber-600 shrink-0" />
+              <p className="text-xs text-amber-800 leading-relaxed">
+                Ao selecionar o perfil de <strong>Servidor</strong>, você terá acesso às ferramentas de criação e gestão de eventos após a confirmação dos dados.
+              </p>
             </div>
           )}
 
@@ -128,16 +141,16 @@ export default function InstitutionPage() {
             <button 
               type="button" 
               onClick={() => navigate('/perfil')}
-              className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-all"
+              className="flex-1 py-4 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-all"
             >
               Cancelar
             </button>
             <button 
               type="submit" 
               disabled={isLoading} 
-              className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 disabled:bg-indigo-300"
+              className="flex-1 py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 disabled:bg-indigo-300"
             >
-              {isLoading ? 'Salvando...' : 'Salvar Vínculo'}
+              {isLoading ? 'Salvando...' : 'Confirmar Vínculo'}
             </button>
           </div>
         </form>
