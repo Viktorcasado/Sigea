@@ -10,7 +10,6 @@ import {
   Shield, 
   LogOut, 
   Calendar, 
-  ClipboardList, 
   Clock, 
   PlusCircle, 
   LayoutDashboard, 
@@ -18,92 +17,182 @@ import {
   ShieldCheck, 
   FileQuestion, 
   Info, 
-  BookOpen 
+  BookOpen,
+  Bell,
+  Settings
 } from 'lucide-react';
 import ProfileHeader from '@/src/components/profile/ProfileHeader';
 import ProfileMenuItem from '@/src/components/profile/ProfileMenuItem';
 import ProfileSection from '@/src/components/profile/ProfileSection';
+import { motion } from 'motion/react';
 
 export default function ProfilePage() {
   const { user, logout } = useUser();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (window.confirm('Tem certeza que deseja encerrar a sessão?')) {
-      logout();
-      navigate('/');
+      await logout();
+      navigate('/login');
     }
   };
 
-  const renderEventMenu = () => {
+  const renderAcademicMenu = () => {
     if (!user) return null;
     
-    switch (user.perfil) {
-      case 'servidor':
-        return (
-          <>
-            <ProfileMenuItem to="/evento/criar" icon={PlusCircle} label="Criar evento" />
-            <ProfileMenuItem to="/perfil/meus-eventos" icon={Calendar} label="Meus eventos" />
-            <ProfileMenuItem to="/perfil/inscritos" icon={ClipboardList} label="Lista de inscritos" />
-            <ProfileMenuItem to="/perfil/marcar-presenca" icon={Clock} label="Marcar presença" />
-          </>
-        );
-      case 'gestor':
-        return (
-          <>
-            <ProfileMenuItem to="/gestor/painel" icon={LayoutDashboard} label="Painel do gestor" />
-            <ProfileMenuItem to="/gestor/eventos" icon={Calendar} label="Eventos da instituição" />
-            <ProfileMenuItem to="/gestor/relatorios" icon={FileBarChart} label="Relatórios" />
-            <ProfileMenuItem to="/gestor/vinculos" icon={ShieldCheck} label="Aprovar vínculos" />
-          </>
-        );
-      default: // aluno e comunidade_externa
-        return (
-          <>
-            <ProfileMenuItem to="/perfil/eventos-inscritos" icon={Calendar} label="Eventos inscritos" />
-            <ProfileMenuItem to="/perfil/presencas" icon={Clock} label="Minhas presenças" />
-          </>
-        );
+    if (user.perfil === 'gestor' || user.status === 'gestor') {
+      return (
+        <ProfileSection title="Gestão Institucional" delay={0.2}>
+          <ProfileMenuItem 
+            to="/gestor/painel" 
+            icon={LayoutDashboard} 
+            label="Painel Administrativo" 
+            description="Visão geral e estatísticas"
+          />
+          <ProfileMenuItem 
+            to="/gestor/eventos" 
+            icon={Calendar} 
+            label="Eventos da Unidade" 
+            description="Gerenciar todos os eventos"
+          />
+          <ProfileMenuItem 
+            to="/gestor/vinculos" 
+            icon={ShieldCheck} 
+            label="Validar Vínculos" 
+            description="Aprovar novos membros"
+          />
+          <ProfileMenuItem 
+            to="/gestor/relatorios" 
+            icon={FileBarChart} 
+            label="Relatórios e Dados" 
+            description="Exportar planilhas e PDFs"
+          />
+        </ProfileSection>
+      );
     }
+
+    if (user.perfil === 'servidor') {
+      return (
+        <ProfileSection title="Organização" delay={0.2}>
+          <ProfileMenuItem 
+            to="/evento/criar" 
+            icon={PlusCircle} 
+            label="Criar Novo Evento" 
+            description="Publicar na plataforma"
+          />
+          <ProfileMenuItem 
+            to="/perfil/meus-eventos" 
+            icon={Calendar} 
+            label="Meus Eventos" 
+            description="Gerenciar cronogramas"
+          />
+          <ProfileMenuItem 
+            to="/perfil/marcar-presenca" 
+            icon={Clock} 
+            label="Controle de Presença" 
+            description="Validar via QR Code"
+          />
+        </ProfileSection>
+      );
+    }
+
+    // Aluno e Comunidade
+    return (
+      <ProfileSection title="Minha Participação" delay={0.2}>
+        <ProfileMenuItem 
+          to="/perfil/eventos-inscritos" 
+          icon={Calendar} 
+          label="Inscrições Ativas" 
+          description="Eventos que vou participar"
+        />
+        <ProfileMenuItem 
+          to="/perfil/presencas" 
+          icon={Clock} 
+          label="Histórico de Presença" 
+          description="Atividades confirmadas"
+        />
+        <ProfileMenuItem 
+          to="/certificados" 
+          icon={FileText} 
+          label="Meus Certificados" 
+          description="Baixar documentos emitidos"
+        />
+      </ProfileSection>
+    );
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8 pb-10">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="max-w-2xl mx-auto space-y-8 pb-12"
+    >
       <ProfileHeader user={user} />
 
-      <ProfileSection title="Conta" delay={0.1}>
-        <ProfileMenuItem to="/perfil/editar" icon={UserIcon} label="Dados pessoais" />
-        <ProfileMenuItem to="/perfil/instituicao-campus" icon={Building} label="Instituição e Campus" />
-        <ProfileMenuItem to="/perfil/documentos" icon={FileText} label="Documentos e CPF" />
-        <ProfileMenuItem to="/perfil/seguranca" icon={Shield} label="Segurança e Senha" />
+      <ProfileSection title="Configurações de Conta" delay={0.1}>
+        <ProfileMenuItem 
+          to="/perfil/editar" 
+          icon={UserIcon} 
+          label="Dados Pessoais" 
+          description="Nome, e-mail e telefone"
+        />
+        <ProfileMenuItem 
+          to="/perfil/instituicao-campus" 
+          icon={Building} 
+          label="Vínculo Institucional" 
+          description="IFAL, UFAL ou Comunidade"
+        />
+        <ProfileMenuItem 
+          to="/perfil/documentos" 
+          icon={FileText} 
+          label="Documentos e CPF" 
+          description="Necessário para certificados"
+        />
+        <ProfileMenuItem 
+          to="/perfil/seguranca" 
+          icon={Shield} 
+          label="Segurança" 
+          description="Alterar senha e acessos"
+        />
       </ProfileSection>
 
-      {user && (
-        <ProfileSection title="Atividades Acadêmicas" delay={0.2}>
-          {renderEventMenu()}
-        </ProfileSection>
-      )}
+      {renderAcademicMenu()}
 
-      <ProfileSection title="Suporte e Informações" delay={0.3}>
+      <ProfileSection title="Preferências" delay={0.3}>
+        <ProfileMenuItem 
+          to="/notificacoes" 
+          icon={Bell} 
+          label="Notificações" 
+          description="Alertas de eventos e certificados"
+        />
+        <ProfileMenuItem 
+          to="/perfil/configuracoes" 
+          icon={Settings} 
+          label="Ajustes do App" 
+          description="Tema e idioma"
+        />
+      </ProfileSection>
+
+      <ProfileSection title="Suporte" delay={0.4}>
         <ProfileMenuItem to="/sistema/politicas" icon={FileQuestion} label="Privacidade" />
         <ProfileMenuItem to="/sistema/termos" icon={BookOpen} label="Termos de Uso" />
         <ProfileMenuItem to="/sistema/sobre" icon={Info} label="Sobre o SIGEA" />
       </ProfileSection>
 
-      {user && (
-        <div className="px-2">
-          <ProfileMenuItem 
-            onClick={handleLogout} 
-            icon={LogOut} 
-            label="Sair da conta" 
-            variant="danger" 
-          />
-        </div>
-      )}
-      
-      <div className="text-center pt-4">
-        <p className="text-xs text-gray-400 font-medium">SIGEA v1.0.0 • IFAL/UFAL</p>
+      <div className="px-2 pt-4">
+        <ProfileMenuItem 
+          onClick={handleLogout} 
+          icon={LogOut} 
+          label="Sair da Conta" 
+          variant="danger" 
+        />
       </div>
-    </div>
+      
+      <div className="text-center">
+        <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">
+          Desenvolvido por SIGEA Team • v1.0.0
+        </p>
+      </div>
+    </motion.div>
   );
 }
