@@ -2,41 +2,47 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Search, CheckCircle, XCircle, QrCode, ShieldCheck, Calendar, Clock, Building } from 'lucide-react';
-import { CertificateRepository } from '@/src/repositories/CertificateRepository';
-import { Certificate, Event } from '@/src/types';
+import { ArrowLeft, Search, CheckCircle, XCircle, QrCode, ShieldCheck, Calendar, Clock, Building, Loader2 } from 'lucide-react';
+import { CertificateRepository, ValidationResult } from '@/src/repositories/CertificateRepository';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function ValidateCertificatePage() {
   const [searchParams] = useSearchParams();
   const [code, setCode] = useState(searchParams.get('codigo') || '');
-  const [status, setStatus] = useState<'idle' | 'loading' | 'valid' | 'invalid'>('idle');
-  const [result, setResult] = useState<{ certificate: Certificate; event: Event } | null>(null);
+  const [status, setStatus] = useState<'idle' | 'loading' | 'valid' | 'invalid' | 'error'>('idle');
+  const [result, setResult] = useState<ValidationResult | null>(null);
 
   const handleValidation = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!code.trim()) return;
 
     setStatus('loading');
+    setResult(null);
     
-    // Simula um pequeno delay de rede
-    setTimeout(async () => {
+    try {
       const data = await CertificateRepository.validate(code);
       if (data) {
         setResult(data);
         setStatus('valid');
       } else {
-        setResult(null);
         setStatus('invalid');
       }
-    }, 800);
+    } catch (err) {
+      console.error(err);
+      setStatus('error');
+    }
   };
 
+  // Validação automática se houver código na URL
   useEffect(() => {
-    if (searchParams.get('codigo')) {
-      handleValidation();
+    const urlCode = searchParams.get('codigo');
+    if (urlCode) {
+      setCode(urlCode);
+      // Pequeno delay para UX
+      const timer = setTimeout(() => handleValidation(), 500);
+      return () => clearTimeout(timer);
     }
-  }, []);
+  }, [searchParams]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
@@ -75,19 +81,12 @@ export default function ValidateCertificatePage() {
                 className="absolute right-2 top-2 bottom-2 px-4 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors disabled:bg-indigo-300"
               >
                 {status === 'loading' ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
                   <Search className="w-5 h-5" />
                 )}
               </button>
             </div>
-            <button 
-              type="button"
-              className="w-full flex items-center justify-center gap-2 py-3 text-gray-500 font-semibold hover:text-gray-700 transition-colors"
-            >
-              <QrCode className="w-5 h-5" />
-              Escanear QR Code
-            </button>
           </form>
 
           <AnimatePresence mode="wait">
@@ -104,35 +103,35 @@ export default function ValidateCertificatePage() {
                       <CheckCircle className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold text-green-900">Documento Autêntico</h2>
-                      <p className="text-green-700 text-sm">Este certificado é válido e foi emitido pelo SIGEA.</p>
+                      <h2 className="text-xl font-bold text-green-900">Certificado Válido</h2>
+                      <p className="text-green-700 text-sm">Este documento é autêntico e foi emitido pelo SIGEA.</p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div className="space-y-1">
                       <p className="text-xs font-black text-green-800/50 uppercase">Evento</p>
-                      <p className="font-bold text-green-900">{result.event.titulo}</p>
+                      <p className="font-bold text-green-900">{result.evento_titulo}</p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-xs font-black text-green-800/50 uppercase">Instituição</p>
                       <div className="flex items-center gap-2 text-green-900 font-semibold">
                         <Building className="w-4 h-4" />
-                        {result.event.instituicao} - {result.event.campus}
+                        {result.instituicao_sigla} - {result.campus_nome}
                       </div>
                     </div>
                     <div className="space-y-1">
                       <p className="text-xs font-black text-green-800/50 uppercase">Carga Horária</p>
                       <div className="flex items-center gap-2 text-green-900 font-semibold">
                         <Clock className="w-4 h-4" />
-                        {result.certificate.cargaHoraria} horas
+                        {result.carga_horaria_total} horas
                       </div>
                     </div>
                     <div className="space-y-1">
                       <p className="text-xs font-black text-green-800/50 uppercase">Data de Emissão</p>
                       <div className="flex items-center gap-2 text-green-900 font-semibold">
                         <Calendar className="w-4 h-4" />
-                        {result.certificate.dataEmissao.toLocaleDateString('pt-BR')}
+                        {new Date(result.emitido_em).toLocaleDateString('pt-BR')}
                       </div>
                     </div>
                   </div>
@@ -152,8 +151,27 @@ export default function ValidateCertificatePage() {
                     <XCircle className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-red-900">Certificado Inválido</h2>
+                    <h2 className="text-xl font-bold text-red-900">Certificado não encontrado</h2>
                     <p className="text-red-700 mt-1">Não encontramos nenhum registro com o código informado. Verifique se houve erro de digitação.</p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {status === 'error' && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mt-8 pt-8 border-t border-gray-100"
+              >
+                <div className="bg-orange-50 border border-orange-100 rounded-2xl p-6 flex items-start gap-4">
+                  <div className="bg-orange-500 p-2 rounded-full shrink-0">
+                    <XCircle className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-orange-900">Erro ao validar</h2>
+                    <p className="text-orange-700 mt-1">Ocorreu um problema técnico ao consultar o sistema. Tente novamente em instantes.</p>
                   </div>
                 </div>
               </motion.div>

@@ -1,43 +1,27 @@
 "use client";
 
-import { Certificate, Event } from '@/src/types';
 import { supabase } from '@/src/integrations/supabase/client';
 
+export interface ValidationResult {
+  codigo_certificado: string;
+  evento_titulo: string;
+  instituicao_sigla: string;
+  campus_nome: string;
+  carga_horaria_total: number;
+  emitido_em: string;
+}
+
 export const CertificateRepository = {
-  async validate(code: string): Promise<{ certificate: Certificate; event: Event } | null> {
-    // Busca o certificado no Supabase pelo código
-    const { data, error } = await supabase
-      .from('certificados')
-      .select(`
-        *,
-        events:evento_id (*)
-      `)
-      .eq('codigo_certificado', code.trim())
-      .maybeSingle();
+  async validate(code: string): Promise<ValidationResult | null> {
+    const { data, error } = await supabase.rpc('validate_certificate', {
+      p_codigo: code.trim()
+    });
 
-    if (error || !data) return null;
+    if (error || !data || data.length === 0) {
+      console.error("Erro na validação:", error);
+      return null;
+    }
 
-    const certificate: Certificate = {
-      id: data.id,
-      userId: data.user_id,
-      eventoId: data.evento_id,
-      codigo: data.codigo_certificado,
-      dataEmissao: new Date(data.emitido_em)
-    };
-
-    const event: Event = {
-      id: data.events.id,
-      titulo: data.events.title,
-      descricao: data.events.description || '',
-      dataInicio: new Date(data.events.date),
-      local: data.events.location || '',
-      campus: data.events.campus || '',
-      instituicao: 'IFAL',
-      modalidade: 'Presencial',
-      status: 'publicado',
-      vagas: data.events.workload || 0
-    };
-
-    return { certificate, event };
+    return data[0];
   }
 };
