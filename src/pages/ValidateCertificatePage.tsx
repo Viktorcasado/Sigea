@@ -52,18 +52,21 @@ export default function ValidateCertificatePage() {
             qrbox: { width: 250, height: 250 },
           },
           (decodedText) => {
-            // Se for uma URL do SIGEA, extrai o código
             let finalCode = decodedText;
             if (decodedText.includes('codigo=')) {
-              const url = new URL(decodedText);
-              finalCode = url.searchParams.get('codigo') || decodedText;
+              try {
+                const url = new URL(decodedText);
+                finalCode = url.searchParams.get('codigo') || decodedText;
+              } catch (e) {
+                // Se não for uma URL válida, usa o texto puro
+              }
             }
             
             setCode(finalCode);
             stopScanner();
             handleValidation(finalCode);
           },
-          () => {} // Silenciar erros de scan falho (frame sem QR)
+          () => {} 
         );
       } catch (err) {
         console.error("Erro ao iniciar câmera:", err);
@@ -87,7 +90,9 @@ export default function ValidateCertificatePage() {
       handleValidation(urlCode);
     }
     return () => {
-      if (scannerRef.current?.isScanning) scannerRef.current.stop();
+      if (scannerRef.current?.isScanning) {
+        scannerRef.current.stop().catch(console.error);
+      }
     };
   }, []);
 
@@ -228,7 +233,7 @@ export default function ValidateCertificatePage() {
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-red-900">Certificado não encontrado</h2>
-                    <p className="text-red-700 mt-1">Não encontramos nenhum registro com o código <strong>{code}</strong>. Verifique se houve erro de digitação ou se o certificado é de outra plataforma.</p>
+                    <p className="text-red-700 mt-1">Não encontramos nenhum registro com o código <strong>{code}</strong>. Verifique se houve erro de digitação.</p>
                   </div>
                 </div>
               </motion.div>
