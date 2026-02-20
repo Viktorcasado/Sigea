@@ -13,26 +13,28 @@ export default function BottomBar() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-100 shadow-lg z-50">
-      <div className="flex justify-around max-w-md mx-auto px-2">
+    <div className="fixed bottom-6 left-0 right-0 flex justify-center px-4 z-50 pointer-events-none">
+      <nav className="pointer-events-auto bg-white/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-[2.5rem] px-2 py-2 flex items-center justify-around w-full max-w-md">
         {navItems.map(({ path, label, icon: Icon }) => (
           <NavLink
             key={path}
             to={path}
             end={path === '/'}
             className={({ isActive }) =>
-              `flex flex-col items-center justify-center w-full pt-3 pb-2 text-[10px] font-bold uppercase tracking-tighter transition-all duration-300 ${
+              `flex flex-col items-center justify-center flex-1 py-2 rounded-[2rem] transition-all duration-300 ${
                 isActive 
-                  ? 'text-indigo-600 scale-110' 
+                  ? 'text-indigo-600 bg-indigo-50/50' 
                   : 'text-gray-400 hover:text-gray-600'
               }`
             }
           >
-            <Icon className="w-6 h-6 mb-1 transition-transform" />
-            <span>{label}</span>
+            <Icon className={`w-6 h-6 transition-transform duration-300 ${isActive ? 'scale-110' : 'scale-100'}`} />
+            <span className="text-[10px] font-bold mt-1 uppercase tracking-tighter">
+              {label}
+            </span>
           </NavLink>
         ))}
-      </div>
-    </nav>
+      </nav>
+    </div>
   );
 }
