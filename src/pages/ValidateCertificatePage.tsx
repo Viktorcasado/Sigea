@@ -52,13 +52,14 @@ export default function ValidateCertificatePage() {
             qrbox: { width: 250, height: 250 },
           },
           (decodedText) => {
+            // Tenta extrair o código se for uma URL
             let finalCode = decodedText;
             if (decodedText.includes('codigo=')) {
               try {
                 const url = new URL(decodedText);
                 finalCode = url.searchParams.get('codigo') || decodedText;
               } catch (e) {
-                // Se não for uma URL válida, usa o texto puro
+                // Mantém o texto original se falhar
               }
             }
             
