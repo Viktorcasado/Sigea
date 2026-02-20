@@ -125,11 +125,9 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   };
 
   const loginWithGoogle = async () => {
+    // Removendo redirectTo explícito para usar o padrão do projeto Supabase
     const { error } = await supabase.auth.signInWithOAuth({ 
-      provider: 'google',
-      options: { 
-        redirectTo: window.location.origin,
-      }
+      provider: 'google'
     });
     if (error) throw error;
   };
