@@ -1,26 +1,29 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Search, CheckCircle, XCircle, QrCode, ShieldCheck, Calendar, Clock, Building, Loader2 } from 'lucide-react';
+import { ArrowLeft, Search, CheckCircle, XCircle, QrCode, ShieldCheck, Calendar, Clock, Building, Loader2, Camera, X } from 'lucide-react';
 import { CertificateRepository, ValidationResult } from '@/src/repositories/CertificateRepository';
 import { motion, AnimatePresence } from 'motion/react';
+import { Html5Qrcode } from 'html5-qrcode';
 
 export default function ValidateCertificatePage() {
   const [searchParams] = useSearchParams();
   const [code, setCode] = useState(searchParams.get('codigo') || '');
   const [status, setStatus] = useState<'idle' | 'loading' | 'valid' | 'invalid' | 'error'>('idle');
   const [result, setResult] = useState<ValidationResult | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
 
-  const handleValidation = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!code.trim()) return;
+  const handleValidation = async (targetCode?: string) => {
+    const codeToValidate = (targetCode || code).trim();
+    if (!codeToValidate) return;
 
     setStatus('loading');
     setResult(null);
     
     try {
-      const data = await CertificateRepository.validate(code);
+      const data = await CertificateRepository.validate(codeToValidate);
       if (data) {
         setResult(data);
         setStatus('valid');
@@ -33,16 +36,60 @@ export default function ValidateCertificatePage() {
     }
   };
 
-  // Validação automática se houver código na URL
+  const startScanner = async () => {
+    setIsScanning(true);
+    setStatus('idle');
+    
+    setTimeout(async () => {
+      try {
+        const html5QrCode = new Html5Qrcode("reader");
+        scannerRef.current = html5QrCode;
+        
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+          },
+          (decodedText) => {
+            // Se for uma URL do SIGEA, extrai o código
+            let finalCode = decodedText;
+            if (decodedText.includes('codigo=')) {
+              const url = new URL(decodedText);
+              finalCode = url.searchParams.get('codigo') || decodedText;
+            }
+            
+            setCode(finalCode);
+            stopScanner();
+            handleValidation(finalCode);
+          },
+          () => {} // Silenciar erros de scan falho (frame sem QR)
+        );
+      } catch (err) {
+        console.error("Erro ao iniciar câmera:", err);
+        alert("Não foi possível acessar a câmera. Verifique as permissões.");
+        setIsScanning(false);
+      }
+    }, 100);
+  };
+
+  const stopScanner = async () => {
+    if (scannerRef.current && scannerRef.current.isScanning) {
+      await scannerRef.current.stop();
+    }
+    setIsScanning(false);
+  };
+
   useEffect(() => {
     const urlCode = searchParams.get('codigo');
     if (urlCode) {
       setCode(urlCode);
-      // Pequeno delay para UX
-      const timer = setTimeout(() => handleValidation(), 500);
-      return () => clearTimeout(timer);
+      handleValidation(urlCode);
     }
-  }, [searchParams]);
+    return () => {
+      if (scannerRef.current?.isScanning) scannerRef.current.stop();
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
@@ -66,28 +113,57 @@ export default function ValidateCertificatePage() {
           <h1 className="text-3xl font-black text-gray-900 mb-2">Validar Certificado</h1>
           <p className="text-gray-500 mb-8">Verifique a autenticidade de documentos emitidos pelo sistema.</p>
 
-          <form onSubmit={handleValidation} className="space-y-4">
-            <div className="relative">
-              <input 
-                type="text"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder="Ex: SIGEA-0001-24"
-                className="w-full pl-4 pr-12 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-indigo-500 focus:bg-white outline-none transition-all font-mono text-lg uppercase placeholder:normal-case"
-              />
-              <button 
-                type="submit"
-                disabled={status === 'loading'}
-                className="absolute right-2 top-2 bottom-2 px-4 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors disabled:bg-indigo-300"
-              >
-                {status === 'loading' ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Search className="w-5 h-5" />
-                )}
-              </button>
-            </div>
-          </form>
+          <div className="space-y-4">
+            {isScanning ? (
+              <div className="relative bg-black rounded-2xl overflow-hidden aspect-square max-w-sm mx-auto">
+                <div id="reader" className="w-full h-full"></div>
+                <button 
+                  onClick={stopScanner}
+                  className="absolute top-4 right-4 p-2 bg-white/20 backdrop-blur-md text-white rounded-full hover:bg-white/40 transition-all z-10"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+                <div className="absolute inset-0 border-2 border-indigo-500/50 pointer-events-none m-12 rounded-xl"></div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                <button 
+                  onClick={startScanner}
+                  className="w-full flex items-center justify-center gap-3 py-4 bg-indigo-50 text-indigo-600 rounded-2xl font-bold hover:bg-indigo-100 transition-all border-2 border-indigo-100 border-dashed"
+                >
+                  <Camera className="w-6 h-6" />
+                  Escanear QR Code
+                </button>
+
+                <div className="relative flex items-center py-2">
+                  <div className="flex-grow border-t border-gray-100"></div>
+                  <span className="flex-shrink mx-4 text-gray-400 text-xs font-bold uppercase">ou digite o código</span>
+                  <div className="flex-grow border-t border-gray-100"></div>
+                </div>
+
+                <form onSubmit={(e) => { e.preventDefault(); handleValidation(); }} className="relative">
+                  <input 
+                    type="text"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    placeholder="Ex: SIGEA-0001-24"
+                    className="w-full pl-4 pr-12 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-indigo-500 focus:bg-white outline-none transition-all font-mono text-lg uppercase placeholder:normal-case"
+                  />
+                  <button 
+                    type="submit"
+                    disabled={status === 'loading'}
+                    className="absolute right-2 top-2 bottom-2 px-4 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors disabled:bg-indigo-300"
+                  >
+                    {status === 'loading' ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Search className="w-5 h-5" />
+                    )}
+                  </button>
+                </form>
+              </div>
+            )}
+          </div>
 
           <AnimatePresence mode="wait">
             {status === 'valid' && result && (
@@ -152,7 +228,7 @@ export default function ValidateCertificatePage() {
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-red-900">Certificado não encontrado</h2>
-                    <p className="text-red-700 mt-1">Não encontramos nenhum registro com o código informado. Verifique se houve erro de digitação.</p>
+                    <p className="text-red-700 mt-1">Não encontramos nenhum registro com o código <strong>{code}</strong>. Verifique se houve erro de digitação ou se o certificado é de outra plataforma.</p>
                   </div>
                 </div>
               </motion.div>
