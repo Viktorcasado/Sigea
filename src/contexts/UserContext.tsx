@@ -3,10 +3,11 @@
 import { createContext, useState, useContext, ReactNode, FC, useEffect } from 'react';
 import { User, UserStatus } from '@/src/types';
 import { supabase } from '@/src/integrations/supabase/client';
-import { User as SupabaseUser } from '@supabase/supabase-js';
+import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 
 interface UserContextType {
   user: User | null;
+  session: Session | null;
   login: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, metadata: any) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
@@ -19,6 +20,7 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   const deriveStatus = (userType: string | null, isOrganizer: boolean): UserStatus => {
@@ -30,36 +32,16 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   const fetchProfile = async (supabaseUser: SupabaseUser | null) => {
     if (!supabaseUser) {
       setUser(null);
-      setLoading(false);
       return;
     }
 
     try {
-      let { data: profile, error } = await supabase
+      const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', supabaseUser.id)
         .maybeSingle();
       
-      if (!profile) {
-        const fullName = supabaseUser.user_metadata.full_name || supabaseUser.user_metadata.name || 'Usuário';
-        const avatarUrl = supabaseUser.user_metadata.avatar_url || supabaseUser.user_metadata.picture || '';
-        
-        const { data: newProfile } = await supabase
-          .from('profiles')
-          .upsert({
-            id: supabaseUser.id,
-            full_name: fullName,
-            user_type: 'comunidade_externa',
-            avatar_url: avatarUrl,
-            is_organizer: false
-          })
-          .select()
-          .single();
-
-        profile = newProfile;
-      }
-
       if (profile) {
         setUser({
           id: profile.id,
@@ -72,38 +54,61 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
           matricula: profile.registration_number || '',
           avatar_url: profile.avatar_url || ''
         } as User);
+      } else {
+        // Fallback para usuário sem perfil no banco ainda
+        setUser({
+          id: supabaseUser.id,
+          nome: supabaseUser.user_metadata.full_name || 'Usuário',
+          email: supabaseUser.email || '',
+          perfil: 'comunidade_externa',
+          status: 'ativo_comunidade',
+          is_organizer: false,
+          avatar_url: supabaseUser.user_metadata.avatar_url || ''
+        } as User);
       }
     } catch (err) {
       console.error("[UserContext] Erro no fetchProfile:", err);
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
+    let mounted = true;
+
     const initAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        await fetchProfile(session.user);
-      } else {
-        setLoading(false);
+      try {
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        if (mounted) {
+          setSession(initialSession);
+          if (initialSession?.user) {
+            await fetchProfile(initialSession.user);
+          }
+        }
+      } catch (error) {
+        console.error("[UserContext] Erro ao inicializar auth:", error);
+      } finally {
+        if (mounted) setLoading(false);
       }
     };
 
     initAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
-        if (session?.user) {
-          await fetchProfile(session.user);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      console.log(`[UserContext] Evento Auth: ${event}`);
+      if (mounted) {
+        setSession(currentSession);
+        if (currentSession?.user) {
+          await fetchProfile(currentSession.user);
+        } else {
+          setUser(null);
         }
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
         setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -131,6 +136,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   };
 
   const logout = async () => {
+    setLoading(true);
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   };
@@ -164,7 +170,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   };
 
   return (
-    <UserContext.Provider value={{ user, login, signUp, loginWithGoogle, logout, updateProfile, loading }}>
+    <UserContext.Provider value={{ user, session, login, signUp, loginWithGoogle, logout, updateProfile, loading }}>
       {children}
     </UserContext.Provider>
   );

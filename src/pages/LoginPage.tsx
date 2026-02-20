@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useUser } from '@/src/contexts/UserContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
@@ -8,9 +8,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { login, loginWithGoogle } = useUser();
+  const { login, loginWithGoogle, session, loading } = useUser();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+
+  // Se já houver sessão e não estiver carregando, vai para a home
+  useEffect(() => {
+    if (!loading && session) {
+      navigate('/', { replace: true });
+    }
+  }, [session, loading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,14 +29,13 @@ export default function LoginPage() {
     setError(null);
     try {
       await login(email, password);
-      navigate('/');
+      // O useEffect acima cuidará do redirecionamento
     } catch (err: any) {
       if (err.message.includes('Invalid login credentials')) {
         setError('E-mail ou senha inválidos.');
       } else {
         setError('Sem conexão. Tente novamente.');
       }
-    } finally {
       setIsLoading(false);
     }
   };
@@ -44,6 +50,8 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
+
+  if (loading) return null;
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">

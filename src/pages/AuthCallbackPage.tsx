@@ -1,35 +1,34 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/src/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 
 export default function AuthCallbackPage() {
   const navigate = useNavigate();
+  const processed = useRef(false);
 
   useEffect(() => {
-    const handleCallback = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.error("Erro no callback de autenticação:", error);
-        navigate('/login?erro=oauth');
-        return;
-      }
+    if (processed.current) return;
+    processed.current = true;
 
-      if (session) {
-        navigate('/');
-      } else {
-        // Pequeno delay para garantir que o Supabase processe o hash da URL
-        setTimeout(async () => {
-          const { data: { session: retrySession } } = await supabase.auth.getSession();
-          if (retrySession) {
-            navigate('/');
-          } else {
-            navigate('/login?erro=oauth');
-          }
-        }, 1500);
+    const handleCallback = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) throw error;
+
+        if (session) {
+          // Limpa a URL (remove hash e query params do OAuth)
+          window.history.replaceState({}, document.title, window.location.origin);
+          navigate('/', { replace: true });
+        } else {
+          navigate('/login?erro=oauth', { replace: true });
+        }
+      } catch (err) {
+        console.error("Erro no callback:", err);
+        navigate('/login?erro=oauth', { replace: true });
       }
     };
 

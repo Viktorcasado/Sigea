@@ -53,7 +53,7 @@ export default function App() {
 }
 
 function AppRoutes() {
-  const { user, loading } = useUser();
+  const { session, loading } = useUser();
 
   if (loading) {
     return (
@@ -65,11 +65,12 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* Rotas Públicas */}
+      {/* Rotas Públicas que não dependem de Auth */}
       <Route path="/validar-certificado" element={<ValidateCertificatePage />} />
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
       
-      {!user ? (
+      {/* Fluxo de Login/Registro */}
+      {!session ? (
         <>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -78,6 +79,7 @@ function AppRoutes() {
         </>
       ) : (
         <>
+          {/* Rotas Protegidas (Usuário Logado) */}
           <Route path="/" element={<Layout />}>
             <Route index element={<HomePage />} />
             <Route path="explorar" element={<ExplorePage />} />
@@ -122,6 +124,8 @@ function AppRoutes() {
             <Route path="/evento/:id/atividades/:activityId/editar" element={<div className='bg-gray-50 min-h-screen font-sans'><ActivityFormPage /></div>} />
           </Route>
 
+          {/* Redireciona qualquer rota desconhecida para a home se logado */}
+          <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </>
       )}
