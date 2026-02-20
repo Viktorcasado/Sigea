@@ -28,63 +28,72 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   };
 
   const fetchProfile = async (supabaseUser: SupabaseUser | null) => {
+    if (!supabaseUser) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
     try {
-      if (supabaseUser) {
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', supabaseUser.id)
-          .maybeSingle();
+      // Tenta buscar o perfil existente
+      let { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', supabaseUser.id)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('[UserContext] Erro ao buscar perfil:', error);
+      }
+
+      // Se o perfil não existe (o trigger falhou ou ainda não rodou), cria um agora
+      if (!profile) {
+        console.log('[UserContext] Perfil não encontrado, criando perfil inicial...');
+        const fullName = supabaseUser.user_metadata.full_name || supabaseUser.user_metadata.name || 'Usuário';
+        const avatarUrl = supabaseUser.user_metadata.avatar_url || supabaseUser.user_metadata.picture || '';
         
-        if (error) {
-          console.error('[UserContext] Erro ao buscar perfil:', error);
-          setUser(null);
-        } else if (!profile) {
-           const fullName = supabaseUser.user_metadata.full_name || supabaseUser.user_metadata.name || 'Usuário';
-           const { data: newProfile, error: upsertError } = await supabase
-            .from('profiles')
-            .upsert({
-              id: supabaseUser.id,
-              full_name: fullName,
-              user_type: 'comunidade_externa',
-              avatar_url: supabaseUser.user_metadata.avatar_url || supabaseUser.user_metadata.picture
-            })
-            .select()
-            .single();
-           
-           if (newProfile) {
-             setUser({
-               id: newProfile.id,
-               nome: newProfile.full_name,
-               email: supabaseUser.email || '',
-               perfil: newProfile.user_type || 'comunidade_externa',
-               status: 'ativo_comunidade',
-               is_organizer: false,
-               avatar_url: newProfile.avatar_url
-             } as User);
-           } else {
-             console.error("[UserContext] Erro ao criar perfil automático:", upsertError);
-             setUser(null);
-           }
+        const { data: newProfile, error: insertError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: supabaseUser.id,
+            full_name: fullName,
+            user_type: 'comunidade_externa',
+            avatar_url: avatarUrl,
+            is_organizer: false
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error("[UserContext] Erro ao criar perfil manual:", insertError);
+          // Mesmo com erro no insert, vamos tentar montar um usuário básico para não travar o login
+          profile = { 
+            id: supabaseUser.id, 
+            full_name: fullName, 
+            user_type: 'comunidade_externa', 
+            avatar_url: avatarUrl,
+            is_organizer: false 
+          };
         } else {
-          setUser({
-            id: profile.id,
-            nome: profile.full_name,
-            email: supabaseUser.email || '',
-            perfil: profile.user_type || 'comunidade_externa',
-            status: deriveStatus(profile.user_type, profile.is_organizer || false),
-            is_organizer: profile.is_organizer || false,
-            campus: profile.campus,
-            matricula: profile.registration_number,
-            avatar_url: profile.avatar_url
-          } as User);
+          profile = newProfile;
         }
-      } else {
-        setUser(null);
+      }
+
+      if (profile) {
+        setUser({
+          id: profile.id,
+          nome: profile.full_name || 'Usuário',
+          email: supabaseUser.email || '',
+          perfil: profile.user_type || 'comunidade_externa',
+          status: deriveStatus(profile.user_type, profile.is_organizer || false),
+          is_organizer: profile.is_organizer || false,
+          campus: profile.campus || '',
+          matricula: profile.registration_number || '',
+          avatar_url: profile.avatar_url || ''
+        } as User);
       }
     } catch (err) {
-      console.error("[UserContext] Erro crítico:", err);
-      setUser(null);
+      console.error("[UserContext] Erro crítico no fetchProfile:", err);
     } finally {
       setLoading(false);
     }
@@ -93,14 +102,21 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   useEffect(() => {
     const initAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      await fetchProfile(session?.user ?? null);
+      if (session?.user) {
+        await fetchProfile(session.user);
+      } else {
+        setLoading(false);
+      }
     };
 
     initAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log(`[UserContext] Auth Event: ${event}`);
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
-        fetchProfile(session?.user ?? null);
+        if (session?.user) {
+          await fetchProfile(session.user);
+        }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setLoading(false);
@@ -127,9 +143,11 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   };
 
   const loginWithGoogle = async () => {
-    // Removendo opções manuais para usar o padrão do Supabase Dashboard
     const { error } = await supabase.auth.signInWithOAuth({ 
-      provider: 'google'
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin
+      }
     });
     if (error) throw error;
   };
