@@ -88,7 +88,6 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   };
 
   useEffect(() => {
-    // Carregamento inicial
     const initAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       await fetchProfile(session?.user ?? null);
@@ -125,9 +124,11 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   };
 
   const loginWithGoogle = async () => {
-    // Removendo redirectTo explícito para usar o padrão do projeto Supabase
     const { error } = await supabase.auth.signInWithOAuth({ 
-      provider: 'google'
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin
+      }
     });
     if (error) throw error;
   };
