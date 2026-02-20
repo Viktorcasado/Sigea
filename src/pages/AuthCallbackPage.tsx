@@ -11,24 +11,31 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     if (processed.current) return;
-    processed.current = true;
-
+    
     const handleCallback = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) throw error;
-
-        if (session) {
-          // Limpa a URL (remove hash e query params do OAuth)
-          window.history.replaceState({}, document.title, window.location.origin);
-          navigate('/', { replace: true });
-        } else {
-          navigate('/login?erro=oauth', { replace: true });
-        }
-      } catch (err) {
-        console.error("Erro no callback:", err);
+      // O Supabase processa o hash da URL automaticamente ao chamar getSession ou onAuthStateChange
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error("Erro no callback:", error);
         navigate('/login?erro=oauth', { replace: true });
+        return;
+      }
+
+      if (session) {
+        processed.current = true;
+        // Limpa a URL para remover tokens e hashes
+        window.history.replaceState({}, document.title, "/");
+        navigate('/', { replace: true });
+      } else {
+        // Se não encontrou sessão de imediato, pode ser delay do hash. 
+        // Vamos esperar o evento do onAuthStateChange no UserContext resolver.
+        const timeout = setTimeout(() => {
+          if (!processed.current) {
+            navigate('/login?erro=oauth', { replace: true });
+          }
+        }, 5000);
+        return () => clearTimeout(timeout);
       }
     };
 

@@ -65,21 +65,16 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* Rotas Públicas que não dependem de Auth */}
-      <Route path="/validar-certificado" element={<ValidateCertificatePage />} />
+      {/* ROTAS SEMPRE PÚBLICAS */}
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
-      
-      {/* Fluxo de Login/Registro */}
-      {!session ? (
+      <Route path="/validar-certificado" element={<ValidateCertificatePage />} />
+      <Route path="/login" element={!session ? <LoginPage /> : <Navigate to="/" replace />} />
+      <Route path="/register" element={!session ? <RegisterPage /> : <Navigate to="/" replace />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+
+      {/* ROTAS PROTEGIDAS */}
+      {session ? (
         <>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </>
-      ) : (
-        <>
-          {/* Rotas Protegidas (Usuário Logado) */}
           <Route path="/" element={<Layout />}>
             <Route index element={<HomePage />} />
             <Route path="explorar" element={<ExplorePage />} />
@@ -123,11 +118,11 @@ function AppRoutes() {
             <Route path="/evento/:id/atividades/criar" element={<div className='bg-gray-50 min-h-screen font-sans'><ActivityFormPage /></div>} />
             <Route path="/evento/:id/atividades/:activityId/editar" element={<div className='bg-gray-50 min-h-screen font-sans'><ActivityFormPage /></div>} />
           </Route>
-
-          {/* Redireciona qualquer rota desconhecida para a home se logado */}
-          <Route path="/login" element={<Navigate to="/" replace />} />
+          
           <Route path="*" element={<Navigate to="/" replace />} />
         </>
+      ) : (
+        <Route path="*" element={<Navigate to="/login" replace />} />
       )}
     </Routes>
   );

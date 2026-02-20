@@ -36,7 +36,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
     }
 
     try {
-      const { data: profile, error } = await supabase
+      const { data: profile } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', supabaseUser.id)
@@ -55,7 +55,6 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
           avatar_url: profile.avatar_url || ''
         } as User);
       } else {
-        // Fallback para usuário sem perfil no banco ainda
         setUser({
           id: supabaseUser.id,
           nome: supabaseUser.user_metadata.full_name || 'Usuário',
@@ -72,43 +71,28 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   };
 
   useEffect(() => {
-    let mounted = true;
-
     const initAuth = async () => {
-      try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
-        if (mounted) {
-          setSession(initialSession);
-          if (initialSession?.user) {
-            await fetchProfile(initialSession.user);
-          }
-        }
-      } catch (error) {
-        console.error("[UserContext] Erro ao inicializar auth:", error);
-      } finally {
-        if (mounted) setLoading(false);
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      setSession(initialSession);
+      if (initialSession?.user) {
+        await fetchProfile(initialSession.user);
       }
+      setLoading(false);
     };
 
     initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      console.log(`[UserContext] Evento Auth: ${event}`);
-      if (mounted) {
-        setSession(currentSession);
-        if (currentSession?.user) {
-          await fetchProfile(currentSession.user);
-        } else {
-          setUser(null);
-        }
-        setLoading(false);
+      setSession(currentSession);
+      if (currentSession?.user) {
+        await fetchProfile(currentSession.user);
+      } else {
+        setUser(null);
       }
+      setLoading(false);
     });
 
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -137,36 +121,21 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
 
   const logout = async () => {
     setLoading(true);
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    await supabase.auth.signOut();
   };
 
   const updateProfile = async (updates: Partial<User>) => {
     if (!user) return;
-    
-    const profileUpdates: any = {};
-    if (updates.nome !== undefined) profileUpdates.full_name = updates.nome;
-    if (updates.campus !== undefined) profileUpdates.campus = updates.campus;
-    if (updates.matricula !== undefined) profileUpdates.registration_number = updates.matricula;
-    if (updates.avatar_url !== undefined) profileUpdates.avatar_url = updates.avatar_url;
-    if (updates.perfil !== undefined) profileUpdates.user_type = updates.perfil;
-    if (updates.is_organizer !== undefined) profileUpdates.is_organizer = updates.is_organizer;
-
-    const { error } = await supabase
-      .from('profiles')
-      .update(profileUpdates)
-      .eq('id', user.id);
-    
+    const { error } = await supabase.from('profiles').update({
+      full_name: updates.nome,
+      campus: updates.campus,
+      registration_number: updates.matricula,
+      avatar_url: updates.avatar_url,
+      user_type: updates.perfil,
+      is_organizer: updates.is_organizer
+    }).eq('id', user.id);
     if (error) throw error;
-    
-    const newUserType = updates.perfil !== undefined ? updates.perfil : user.perfil;
-    const newIsOrganizer = updates.is_organizer !== undefined ? updates.is_organizer : user.is_organizer;
-    
-    setUser(prev => prev ? { 
-      ...prev, 
-      ...updates,
-      status: deriveStatus(newUserType, newIsOrganizer)
-    } : null);
+    setUser(prev => prev ? { ...prev, ...updates } : null);
   };
 
   return (
