@@ -4,17 +4,19 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useNotifications } from '@/src/contexts/NotificationContext';
 import { useUser } from '@/src/contexts/UserContext';
+import { useToast } from '@/src/contexts/ToastContext';
 import { supabase } from '@/src/integrations/supabase/client';
 import { Event } from '@/src/types';
 import { ArrowLeft, Share2, Calendar, MapPin, Award, CheckCircle, Clock } from 'lucide-react';
 import { motion } from 'motion/react';
-import { shareContent, formatEventShare } from '@/src/utils/share';
+import { handleShare, formatEventShare } from '@/src/utils/share';
 
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useUser();
   const { addNotification } = useNotifications();
+  const { showToast } = useToast();
   
   const [event, setEvent] = useState<Event | null>(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -120,8 +122,9 @@ export default function EventDetailPage() {
         tipo: 'evento',
         referenciaId: event.id,
       });
+      showToast('Inscrição realizada com sucesso!');
     } else {
-      alert('Erro ao realizar inscrição.');
+      showToast('Erro ao realizar inscrição.', 'error');
     }
     setSubmitting(false);
   };
@@ -149,16 +152,16 @@ export default function EventDetailPage() {
         mensagem: `O certificado do evento "${event.titulo}" foi gerado com sucesso!`,
         tipo: 'certificado',
       });
-      alert('Certificado gerado! Você pode visualizá-lo na aba de Certificados.');
+      showToast('Certificado gerado com sucesso!');
     } else {
-      alert(`Erro ao gerar certificado: ${error.message}`);
+      showToast('Erro ao gerar certificado.', 'error');
     }
     setSubmitting(false);
   };
 
-  const handleShare = () => {
+  const onShare = () => {
     if (event) {
-      shareContent(formatEventShare(event));
+      handleShare(formatEventShare(event), showToast);
     }
   };
 
@@ -175,7 +178,7 @@ export default function EventDetailPage() {
           Voltar
         </button>
         <button 
-          onClick={handleShare}
+          onClick={onShare}
           className="p-2.5 bg-white border border-gray-200 rounded-xl text-gray-600 hover:text-indigo-600 hover:border-indigo-100 transition-all shadow-sm"
           title="Compartilhar Evento"
         >
@@ -246,7 +249,7 @@ export default function EventDetailPage() {
                 </button>
             )}
             <button 
-              onClick={handleShare}
+              onClick={onShare}
               className="px-6 py-4 rounded-2xl bg-white border border-gray-200 text-gray-700 font-bold hover:bg-gray-50 transition-all flex items-center justify-center gap-2"
             >
                 <Share2 className="w-5 h-5" />

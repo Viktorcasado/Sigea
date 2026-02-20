@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { UserProvider, useUser } from './contexts/UserContext';
 import { NotificationProvider } from './contexts/NotificationContext';
+import { ToastProvider } from './contexts/ToastContext';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -41,16 +42,16 @@ import ActivityFormPage from './pages/event/ActivityFormPage';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import CertificateTemplatePage from './pages/gestor/CertificateTemplatePage';
 import CertificateEditorPage from './pages/gestor/CertificateEditorPage';
-import { Toaster } from 'react-hot-toast';
 
 export default function App() {
   return (
     <UserProvider>
       <NotificationProvider>
-        <BrowserRouter>
-          <Toaster position="top-center" reverseOrder={false} />
-          <AppRoutes />
-        </BrowserRouter>
+        <ToastProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </ToastProvider>
       </NotificationProvider>
     </UserProvider>
   );

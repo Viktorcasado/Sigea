@@ -1,16 +1,13 @@
 "use client";
 
-import toast from 'react-hot-toast';
-
 interface ShareData {
   title: string;
   text: string;
   url: string;
 }
 
-export const shareContent = async (data: ShareData) => {
-  const shareText = `${data.text}\n\n${data.url}`;
-
+// Função auxiliar para ser usada dentro de componentes que têm acesso ao hook useToast
+export const handleShare = async (data: ShareData, showToast: (msg: string) => void) => {
   if (navigator.share) {
     try {
       await navigator.share({
@@ -20,27 +17,17 @@ export const shareContent = async (data: ShareData) => {
       });
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {
-        copyToClipboard(data.url);
+        copyToClipboard(data.url, showToast);
       }
     }
   } else {
-    copyToClipboard(data.url);
+    copyToClipboard(data.url, showToast);
   }
 };
 
-const copyToClipboard = (text: string) => {
+const copyToClipboard = (text: string, showToast: (msg: string) => void) => {
   navigator.clipboard.writeText(text).then(() => {
-    toast.success('Link copiado para a área de transferência!', {
-      icon: '🔗',
-      style: {
-        borderRadius: '16px',
-        background: '#333',
-        color: '#fff',
-        fontWeight: 'bold',
-      },
-    });
-  }).catch(() => {
-    toast.error('Erro ao copiar link.');
+    showToast('Link copiado para a área de transferência!');
   });
 };
 
