@@ -1,8 +1,14 @@
 "use client";
 
 import React from 'react';
+import { usePlatform } from '@/src/hooks/usePlatform';
 
 const WhatsAppButton = () => {
+  const { isMobile, isIos } = usePlatform();
+
+  // Ajusta a distância do fundo baseado na plataforma
+  const bottomSpacing = isMobile ? (isIos ? '100px' : '80px') : '30px';
+
   return (
     <>
       <style>
@@ -24,19 +30,19 @@ const WhatsAppButton = () => {
             cursor: pointer;
             width: 56px;
             height: 56px;
-            bottom: 80px;
+            bottom: ${bottomSpacing};
             right: 20px;
             transition: 0.3s;
             background-color: var(--background-color);
             border-radius: 50%;
-            z-index: 999;
+            z-index: 40;
             display: flex;
             align-items: center;
             justify-content: center;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
           }
           
-          @media (min-width: 768px) {
+          @media (min-width: 1024px) {
             .whatsapp-float {
               width: 64px;
               height: 64px;
