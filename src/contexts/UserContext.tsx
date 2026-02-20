@@ -1,3 +1,5 @@
+"use client";
+
 import { createContext, useState, useContext, ReactNode, FC, useEffect } from 'react';
 import { User, UserStatus } from '@/src/types';
 import { supabase } from '@/src/integrations/supabase/client';
@@ -35,16 +37,18 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
           .maybeSingle();
         
         if (error) {
-          console.error('Erro ao buscar perfil:', error);
+          console.error('[UserContext] Erro ao buscar perfil:', error);
           setUser(null);
         } else if (!profile) {
-           // Criar perfil se não existir
+           // Criar perfil se não existir (comum em logins sociais)
+           const fullName = supabaseUser.user_metadata.full_name || supabaseUser.user_metadata.name || 'Usuário';
            const { data: newProfile, error: upsertError } = await supabase
             .from('profiles')
             .upsert({
               id: supabaseUser.id,
-              full_name: supabaseUser.user_metadata.full_name || 'Usuário',
-              user_type: 'comunidade_externa'
+              full_name: fullName,
+              user_type: 'comunidade_externa',
+              avatar_url: supabaseUser.user_metadata.avatar_url || supabaseUser.user_metadata.picture
             })
             .select()
             .single();
@@ -60,7 +64,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
                avatar_url: newProfile.avatar_url
              } as User);
            } else {
-             console.error("Erro ao criar perfil automático:", upsertError);
+             console.error("[UserContext] Erro ao criar perfil automático:", upsertError);
              setUser(null);
            }
         } else {
@@ -80,7 +84,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
         setUser(null);
       }
     } catch (err) {
-      console.error("Erro crítico no UserContext:", err);
+      console.error("[UserContext] Erro crítico:", err);
       setUser(null);
     } finally {
       setLoading(false);
@@ -124,10 +128,15 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   };
 
   const loginWithGoogle = async () => {
+    // O redirectTo deve ser a URL base do seu site
     const { error } = await supabase.auth.signInWithOAuth({ 
       provider: 'google',
       options: {
-        redirectTo: window.location.origin
+        redirectTo: window.location.origin,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
       }
     });
     if (error) throw error;
