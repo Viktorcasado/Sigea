@@ -30,10 +30,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   };
 
   const fetchProfile = async (supabaseUser: SupabaseUser | null) => {
-    if (!supabaseUser) {
-      setUser(null);
-      return;
-    }
+    if (!supabaseUser) return;
 
     try {
       const { data: profile } = await supabase
@@ -54,45 +51,48 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
           matricula: profile.registration_number || '',
           avatar_url: profile.avatar_url || ''
         } as User);
-      } else {
-        setUser({
-          id: supabaseUser.id,
-          nome: supabaseUser.user_metadata.full_name || 'Usuário',
-          email: supabaseUser.email || '',
-          perfil: 'comunidade_externa',
-          status: 'ativo_comunidade',
-          is_organizer: false,
-          avatar_url: supabaseUser.user_metadata.avatar_url || ''
-        } as User);
       }
     } catch (err) {
-      console.error("[UserContext] Erro no fetchProfile:", err);
+      console.error("[UserContext] Erro ao buscar perfil:", err);
     }
   };
 
   useEffect(() => {
-    const initAuth = async () => {
+    let isMounted = true;
+
+    const initialize = async () => {
+      // 1. Tenta pegar a sessão atual (recupera do localStorage)
       const { data: { session: initialSession } } = await supabase.auth.getSession();
-      setSession(initialSession);
-      if (initialSession?.user) {
-        await fetchProfile(initialSession.user);
+      
+      if (isMounted) {
+        if (initialSession) {
+          setSession(initialSession);
+          await fetchProfile(initialSession.user);
+        }
+        // Só libera o loading após tentar recuperar a sessão
+        setLoading(false);
       }
-      setLoading(false);
     };
 
-    initAuth();
+    initialize();
 
+    // 2. Escuta mudanças (login, logout, etc)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      setSession(currentSession);
-      if (currentSession?.user) {
-        await fetchProfile(currentSession.user);
-      } else {
-        setUser(null);
+      if (isMounted) {
+        setSession(currentSession);
+        if (currentSession) {
+          await fetchProfile(currentSession.user);
+        } else {
+          setUser(null);
+        }
+        setLoading(false);
       }
-      setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -110,13 +110,10 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   };
 
   const loginWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({ 
+    await supabase.auth.signInWithOAuth({ 
       provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`
-      }
+      options: { redirectTo: `${window.location.origin}/auth/callback` }
     });
-    if (error) throw error;
   };
 
   const logout = async () => {

@@ -55,6 +55,7 @@ export default function App() {
 function AppRoutes() {
   const { session, loading } = useUser();
 
+  // Enquanto estiver carregando a sessão inicial, mostra o spinner
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -65,15 +66,20 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* ROTAS SEMPRE PÚBLICAS */}
+      {/* Rotas Públicas (Sempre acessíveis) */}
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
       <Route path="/validar-certificado" element={<ValidateCertificatePage />} />
-      <Route path="/login" element={!session ? <LoginPage /> : <Navigate to="/" replace />} />
-      <Route path="/register" element={!session ? <RegisterPage /> : <Navigate to="/" replace />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-      {/* ROTAS PROTEGIDAS */}
-      {session ? (
+      {/* Se NÃO estiver logado */}
+      {!session ? (
+        <>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </>
+      ) : (
+        /* Se ESTIVER logado */
         <>
           <Route path="/" element={<Layout />}>
             <Route index element={<HomePage />} />
@@ -118,11 +124,12 @@ function AppRoutes() {
             <Route path="/evento/:id/atividades/criar" element={<div className='bg-gray-50 min-h-screen font-sans'><ActivityFormPage /></div>} />
             <Route path="/evento/:id/atividades/:activityId/editar" element={<div className='bg-gray-50 min-h-screen font-sans'><ActivityFormPage /></div>} />
           </Route>
-          
+
+          {/* Se tentar acessar login já estando logado, vai para a home */}
+          <Route path="/login" element={<Navigate to="/" replace />} />
+          <Route path="/register" element={<Navigate to="/" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </>
-      ) : (
-        <Route path="*" element={<Navigate to="/login" replace />} />
       )}
     </Routes>
   );
