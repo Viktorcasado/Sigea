@@ -22,13 +22,11 @@ export default function EditProfilePage() {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
-    // Validar tipo de arquivo
     if (!file.type.startsWith('image/')) {
       setError('Por favor, selecione uma imagem válida.');
       return;
     }
 
-    // Validar tamanho (ex: 2MB)
     if (file.size > 2 * 1024 * 1024) {
       setError('A imagem deve ter no máximo 2MB.');
       return;
@@ -42,14 +40,12 @@ export default function EditProfilePage() {
       const fileName = `${user.id}-${Math.random()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
-      // Upload para o bucket 'profiles' (certifique-se que este bucket existe e é público)
       const { error: uploadError } = await supabase.storage
         .from('profiles')
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
-      // Obter URL pública
       const { data: { publicUrl } } = supabase.storage
         .from('profiles')
         .getPublicUrl(filePath);

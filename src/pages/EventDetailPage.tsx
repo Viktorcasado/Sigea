@@ -156,47 +156,47 @@ export default function EventDetailPage() {
   };
 
   if (loading) return <div className="flex justify-center py-20"><div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div></div>;
-  if (!event) return <div className="text-center py-20"><h2 className="text-2xl font-bold dark:text-white">Evento não encontrado</h2></div>;
+  if (!event) return <div className="text-center py-20"><h2 className="text-2xl font-bold">Evento não encontrado</h2></div>;
 
   const minutesLeft = getMinutesRemaining();
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
       <header className="mb-6">
-        <button onClick={() => navigate(-1)} className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-semibold mb-4">
+        <button onClick={() => navigate(-1)} className="flex items-center text-gray-600 hover:text-gray-900 font-semibold mb-4">
           <ArrowLeft className="w-5 h-5 mr-2" />
           Voltar
         </button>
       </header>
 
-      <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-800">
+      <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
         <div className="p-8">
-            <h1 className="text-4xl font-black text-gray-900 dark:text-white mb-4 leading-tight">{event.titulo}</h1>
+            <h1 className="text-4xl font-black text-gray-900 mb-4 leading-tight">{event.titulo}</h1>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-                <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl">
-                    <Calendar className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-2xl">
+                    <Calendar className="w-6 h-6 text-indigo-600" />
                     <div>
-                        <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase">Data</p>
-                        <p className="font-bold text-gray-800 dark:text-gray-200">{event.dataInicio.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                        <p className="text-xs font-bold text-gray-400 uppercase">Data</p>
+                        <p className="font-bold text-gray-800">{event.dataInicio.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl">
-                    <MapPin className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-2xl">
+                    <MapPin className="w-6 h-6 text-indigo-600" />
                     <div>
-                        <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase">Local</p>
-                        <p className="font-bold text-gray-800 dark:text-gray-200">{event.local || event.campus}</p>
+                        <p className="text-xs font-bold text-gray-400 uppercase">Local</p>
+                        <p className="font-bold text-gray-800">{event.local || event.campus}</p>
                     </div>
                 </div>
             </div>
 
-            <div className="prose max-w-none text-gray-600 dark:text-gray-400 leading-relaxed mb-8">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Sobre o evento</h3>
+            <div className="prose max-w-none text-gray-600 leading-relaxed mb-8">
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Sobre o evento</h3>
                 <p>{event.descricao}</p>
             </div>
         </div>
 
-        <div className="p-6 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row gap-4">
+        <div className="p-6 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row gap-4">
             {!isSubscribed ? (
                 <button 
                     onClick={handleSubscription}
@@ -214,12 +214,12 @@ export default function EventDetailPage() {
                     Ver Certificado
                 </Link>
             ) : !canIssueCertificate() ? (
-                <div className="flex-1 flex flex-col items-center justify-center p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/30 rounded-2xl">
-                    <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-bold mb-1">
+                <div className="flex-1 flex flex-col items-center justify-center p-4 bg-amber-50 border border-amber-100 rounded-2xl">
+                    <div className="flex items-center gap-2 text-amber-700 font-bold mb-1">
                         <Clock className="w-5 h-5" />
                         Certificado em processamento
                     </div>
-                    <p className="text-xs text-amber-600 dark:text-amber-500">Disponível em aproximadamente {minutesLeft} {minutesLeft === 1 ? 'minuto' : 'minutos'}</p>
+                    <p className="text-xs text-amber-600">Disponível em aproximadamente {minutesLeft} {minutesLeft === 1 ? 'minuto' : 'minutos'}</p>
                 </div>
             ) : (
                 <button 
@@ -231,7 +231,7 @@ export default function EventDetailPage() {
                     Emitir Certificado
                 </button>
             )}
-            <button className="px-6 py-4 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-all flex items-center justify-center gap-2">
+            <button className="px-6 py-4 rounded-2xl bg-white border border-gray-200 text-gray-700 font-bold hover:bg-gray-50 transition-all flex items-center justify-center gap-2">
                 <Share2 className="w-5 h-5" />
                 Compartilhar
             </button>

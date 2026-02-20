@@ -20,9 +20,6 @@ export default function UserPresencesPage() {
       const loadData = async () => {
         const userPresences = await PresencaRepositoryMock.listByUser(user.id);
         setPresences(userPresences);
-        
-        // Em um cenário real, buscaríamos as atividades relacionadas
-        // Aqui vamos apenas simular o carregamento
         setLoading(false);
       };
       loadData();
