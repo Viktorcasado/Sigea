@@ -26,21 +26,24 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   };
 
   const fetchProfile = async (supabaseUser: SupabaseUser | null) => {
-    if (supabaseUser) {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', supabaseUser.id)
-        .single();
-      
-      if (error) {
-        console.error('Erro ao buscar perfil:', error);
-        if (error.code === 'PGRST116') {
-           const { data: newProfile } = await supabase
+    try {
+      if (supabaseUser) {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', supabaseUser.id)
+          .maybeSingle();
+        
+        if (error) {
+          console.error('Erro ao buscar perfil:', error);
+          setUser(null);
+        } else if (!profile) {
+           // Criar perfil se não existir
+           const { data: newProfile, error: upsertError } = await supabase
             .from('profiles')
             .upsert({
               id: supabaseUser.id,
-              full_name: supabaseUser.user_metadata.full_name || '',
+              full_name: supabaseUser.user_metadata.full_name || 'Usuário',
               user_type: 'comunidade_externa'
             })
             .select()
@@ -56,33 +59,42 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
                is_organizer: false,
                avatar_url: newProfile.avatar_url
              } as User);
+           } else {
+             console.error("Erro ao criar perfil automático:", upsertError);
+             setUser(null);
            }
         } else {
-          setUser(null);
+          setUser({
+            id: profile.id,
+            nome: profile.full_name,
+            email: supabaseUser.email || '',
+            perfil: profile.user_type || 'comunidade_externa',
+            status: deriveStatus(profile.user_type, profile.is_organizer || false),
+            is_organizer: profile.is_organizer || false,
+            campus: profile.campus,
+            matricula: profile.registration_number,
+            avatar_url: profile.avatar_url
+          } as User);
         }
       } else {
-        setUser({
-          id: profile.id,
-          nome: profile.full_name,
-          email: supabaseUser.email || '',
-          perfil: profile.user_type || 'comunidade_externa',
-          status: deriveStatus(profile.user_type, profile.is_organizer || false),
-          is_organizer: profile.is_organizer || false,
-          campus: profile.campus,
-          matricula: profile.registration_number,
-          avatar_url: profile.avatar_url
-        } as User);
+        setUser(null);
       }
-    } else {
+    } catch (err) {
+      console.error("Erro crítico no UserContext:", err);
       setUser(null);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      fetchProfile(session?.user ?? null);
-    });
+    // Carregamento inicial
+    const initAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      await fetchProfile(session?.user ?? null);
+    };
+
+    initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
@@ -117,10 +129,6 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
       provider: 'google',
       options: { 
         redirectTo: window.location.origin,
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'select_account',
-        },
       }
     });
     if (error) throw error;

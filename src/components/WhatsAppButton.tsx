@@ -14,9 +14,8 @@ const WhatsAppButton = () => {
             --background-hover: #009600;
           }
           .whatsapp-icon {
-            width: 48px;
-            height: 48px;
-            transform: scale(0.6) translate(20%, 20%);
+            width: 32px;
+            height: 32px;
             fill: var(--icon-color);
             pointer-events: none;
           }
@@ -36,6 +35,20 @@ const WhatsAppButton = () => {
             justify-content: center;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
           }
+          
+          @media (min-width: 768px) {
+            .whatsapp-float {
+              width: 64px;
+              height: 64px;
+              bottom: 30px;
+              right: 30px;
+            }
+            .whatsapp-icon {
+              width: 38px;
+              height: 38px;
+            }
+          }
+
           .whatsapp-float:hover {
             background-color: var(--background-hover);
             transform: scale(1.05);

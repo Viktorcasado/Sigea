@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, Compass, Award } from 'lucide-react';
+import { Bell, Compass, Award, Calendar } from 'lucide-react';
 import { useNotifications } from '@/src/contexts/NotificationContext';
 import { useUser } from '@/src/contexts/UserContext';
 import { supabase } from '@/src/integrations/supabase/client';
@@ -17,26 +17,31 @@ export default function HomePage() {
 
   useEffect(() => {
     const fetchEvents = async () => {
-      const { data, error } = await supabase
-        .from('events')
-        .select('*')
-        .order('date', { ascending: true })
-        .limit(10);
+      try {
+        const { data, error } = await supabase
+          .from('events')
+          .select('*')
+          .order('date', { ascending: true })
+          .limit(10);
 
-      if (!error && data) {
-        setEvents(data.map(e => ({
-          id: e.id,
-          titulo: e.title,
-          descricao: e.description || '',
-          dataInicio: new Date(e.date),
-          local: e.location || '',
-          campus: e.campus || '',
-          instituicao: 'IFAL',
-          modalidade: 'Presencial',
-          status: 'publicado'
-        })));
+        if (!error && data) {
+          setEvents(data.map(e => ({
+            id: e.id,
+            titulo: e.title,
+            descricao: e.description || '',
+            dataInicio: new Date(e.date),
+            local: e.location || '',
+            campus: e.campus || '',
+            instituicao: 'IFAL',
+            modalidade: 'Presencial',
+            status: 'publicado'
+          })));
+        }
+      } catch (err) {
+        console.error("Erro ao carregar eventos:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchEvents();
@@ -65,11 +70,19 @@ export default function HomePage() {
           <div className="flex gap-4 overflow-hidden">
             {[1, 2, 3].map(i => <div key={i} className="w-64 h-40 bg-gray-100 animate-pulse rounded-xl flex-shrink-0" />)}
           </div>
-        ) : (
+        ) : events.length > 0 ? (
           <div className="flex overflow-x-auto pb-4 -mx-4 px-4 no-scrollbar">
             {events.map(event => (
               <EventCard key={event.id} event={event} />
             ))}
+          </div>
+        ) : (
+          <div className="bg-white p-8 rounded-2xl border border-dashed border-gray-200 text-center">
+            <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500 font-medium">Nenhum evento disponível no momento.</p>
+            <Link to="/explorar" className="text-indigo-600 text-sm font-bold mt-2 inline-block hover:underline">
+              Explorar todos os eventos
+            </Link>
           </div>
         )}
       </section>
