@@ -28,7 +28,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const isInitialMount = useRef(true);
+  const initialized = useRef(false);
 
   const fetchProfile = useCallback(async (supabaseUser: SupabaseUser) => {
     try {
@@ -62,23 +62,18 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    if (!isInitialMount.current) return;
-    isInitialMount.current = false;
+    if (initialized.current) return;
+    initialized.current = true;
 
-    // 1. Tenta recuperar a sessão inicial imediatamente
-    const initializeAuth = async () => {
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
-      
+    // 1. Sincroniza a sessão inicial
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
       if (initialSession) {
         setSession(initialSession);
-        await fetchProfile(initialSession.user);
+        fetchProfile(initialSession.user);
       } else {
-        // Se não houver sessão, paramos o loading aqui
         setLoading(false);
       }
-    };
-
-    initializeAuth();
+    });
 
     // 2. Escuta mudanças de estado (Login, Logout, Refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
@@ -86,6 +81,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
       
       if (currentSession) {
         setSession(currentSession);
+        // Só busca o perfil se o usuário mudou ou se ainda não temos o perfil
         await fetchProfile(currentSession.user);
       } else {
         setSession(null);
