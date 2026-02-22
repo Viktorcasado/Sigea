@@ -21,7 +21,15 @@ export default function Sidebar() {
     <aside className="hidden lg:flex flex-col w-72 bg-white border-r border-gray-100 h-screen sticky top-0 p-6">
       <div className="mb-10 px-2">
         <Link to="/" className="flex items-center gap-3">
-          <img src="/public/assets/logo-light.jpg" alt="SIGEA" className="w-10 h-10 rounded-xl object-contain" />
+          <img 
+            src="/public/assets/logo-light.jpg" 
+            alt="SIGEA" 
+            className="w-10 h-10 rounded-xl object-contain"
+            loading="eager"
+            decoding="async"
+            width="40"
+            height="40"
+          />
           <span className="text-2xl font-black text-gray-900 tracking-tighter">
             SIGEA<span className="text-indigo-600">.</span>
           </span>
@@ -53,7 +61,12 @@ export default function Sidebar() {
           <>
             <div className="flex items-center gap-3 px-2 mb-6">
               {user.avatar_url ? (
-                <img src={user.avatar_url} alt={user.nome} className="w-10 h-10 rounded-full object-cover" />
+                <img 
+                  src={user.avatar_url} 
+                  alt={user.nome} 
+                  className="w-10 h-10 rounded-full object-cover"
+                  loading="lazy"
+                />
               ) : (
                 <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
                   {user.nome.substring(0, 2).toUpperCase()}
