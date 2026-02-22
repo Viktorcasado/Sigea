@@ -2,18 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BadgeCheck, Download, Copy, Award, Search, Loader2, Clock } from 'lucide-react';
+import { BadgeCheck, Download, Copy, Award, Search, Loader2, Clock, Calendar, ExternalLink } from 'lucide-react';
 import { useUser } from '@/src/contexts/UserContext';
 import { supabase } from '@/src/integrations/supabase/client';
 import { Certificate } from '@/src/types';
 import { jsPDF } from 'jspdf';
 import * as QRCode from 'qrcode';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 
 export default function CertificatesPage() {
   const { user, loading: userLoading } = useUser();
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const fetchCertificates = async () => {
@@ -69,6 +70,11 @@ export default function CertificatesPage() {
     fetchCertificates();
   }, [user, userLoading]);
 
+  const filteredCertificates = certificates.filter(cert => 
+    cert.event?.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    cert.codigo.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const generatePdf = async (cert: Certificate) => {
     if (!cert.event) return;
     const doc = new jsPDF({ orientation: 'landscape' });
@@ -120,81 +126,115 @@ export default function CertificatesPage() {
 
   if (loading || userLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-        <Loader2 className="w-10 h-10 animate-spin mb-4" />
-        <p className="font-medium">Carregando seus certificados...</p>
+      <div className="flex flex-col items-center justify-center py-32 text-gray-400">
+        <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mb-4" />
+        <p className="font-bold text-gray-500">Carregando suas conquistas...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      <header>
-        <h1 className="text-3xl font-black text-gray-900">Certificados</h1>
-        <p className="text-gray-500 mt-1">Seus documentos de participação acadêmica</p>
+    <div className="space-y-8 pb-12">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-4xl font-black text-gray-900 tracking-tight">Certificados</h1>
+          <p className="text-gray-500 mt-1 font-medium">Gerencie e valide seus documentos acadêmicos.</p>
+        </div>
+        <Link to="/validar-certificado" className="flex items-center justify-center gap-3 bg-indigo-600 text-white font-bold px-6 py-3.5 rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
+          <BadgeCheck className="w-6 h-6" />
+          Validar Certificado
+        </Link>
       </header>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Link to="/validar-certificado" className="flex items-center justify-center gap-3 bg-indigo-600 text-white font-bold px-6 py-4 rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
-          <BadgeCheck className="w-6 h-6" />
-          Validar certificado
-        </Link>
-        <Link to="/explorar" className="flex items-center justify-center gap-3 bg-white border border-gray-200 text-gray-700 font-bold px-6 py-4 rounded-2xl hover:bg-gray-50 transition-all">
-          <Search className="w-6 h-6" />
-          Buscar eventos
-        </Link>
+      <div className="relative">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Filtrar por nome do evento ou código..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm text-gray-900 font-medium"
+        />
       </div>
 
-      <main className="space-y-4">
-        {certificates.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-3xl border border-gray-100">
-            <Award className="w-16 h-16 mx-auto text-gray-200 mb-4" />
-            <h3 className="text-xl font-bold text-gray-700">Nenhum certificado ainda</h3>
-            <p className="text-gray-500 mt-2">Inscreva-se em eventos e participe para emitir seus certificados.</p>
-            <Link to="/explorar" className="mt-6 inline-block text-indigo-600 font-bold hover:underline">
-              Explorar eventos agora
-            </Link>
-          </div>
-        ) : (
-          certificates.map((cert, index) => (
+      <main className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <AnimatePresence mode="popLayout">
+          {filteredCertificates.length === 0 ? (
             <motion.div 
-              key={cert.id}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="col-span-full text-center py-32 bg-white rounded-3xl border border-gray-100 shadow-sm"
             >
-              <div className="flex-1">
-                <h3 className="font-bold text-gray-900 text-lg">{cert.event?.titulo || 'Evento não encontrado'}</h3>
-                <div className="flex items-center gap-2 mt-1">
-                  <p className="text-sm text-gray-500 font-mono">{cert.codigo}</p>
-                  <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {cert.carga_horaria}H
-                  </span>
-                </div>
-                <p className="text-xs text-gray-400 mt-2">Emitido em {cert.dataEmissao.toLocaleDateString('pt-BR')}</p>
+              <div className="w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Award className="w-12 h-12 text-indigo-300" />
               </div>
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => generatePdf(cert)}
-                  disabled={!cert.event}
-                  className="p-3 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors disabled:opacity-50"
-                  title="Baixar PDF"
-                >
-                  <Download className="w-5 h-5" />
-                </button>
-                <button 
-                  onClick={() => { navigator.clipboard.writeText(cert.codigo); alert('Código copiado!'); }}
-                  className="p-3 bg-gray-50 text-gray-600 rounded-xl hover:bg-gray-100 transition-colors"
-                  title="Copiar Código"
-                >
-                  <Copy className="w-5 h-5" />
-                </button>
-              </div>
+              <h3 className="text-2xl font-black text-gray-800">Nenhum certificado</h3>
+              <p className="text-gray-500 mt-2 max-w-xs mx-auto font-medium">Participe de eventos para começar a colecionar seus certificados aqui.</p>
+              <Link to="/explorar" className="mt-8 inline-flex items-center gap-2 bg-gray-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-gray-800 transition-all">
+                Explorar Eventos
+              </Link>
             </motion.div>
-          ))
-        )}
+          ) : (
+            filteredCertificates.map((cert, index) => (
+              <motion.div 
+                key={cert.id}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 0.05 }}
+                className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition-all group"
+              >
+                <div className="flex justify-between items-start mb-6">
+                  <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                    <Award className="w-8 h-8" />
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => generatePdf(cert)}
+                      className="p-3 bg-gray-50 text-gray-600 rounded-xl hover:bg-indigo-50 hover:text-indigo-600 transition-all"
+                      title="Baixar PDF"
+                    >
+                      <Download className="w-5 h-5" />
+                    </button>
+                    <Link 
+                      to={`/validar-certificado?codigo=${cert.codigo}`}
+                      className="p-3 bg-gray-50 text-gray-600 rounded-xl hover:bg-emerald-50 hover:text-emerald-600 transition-all"
+                      title="Verificar Autenticidade"
+                    >
+                      <ExternalLink className="w-5 h-5" />
+                    </Link>
+                  </div>
+                </div>
+
+                <h3 className="font-black text-gray-900 text-xl mb-2 leading-tight">{cert.event?.titulo}</h3>
+                
+                <div className="space-y-3 mb-6">
+                  <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">
+                    <Calendar className="w-4 h-4" />
+                    Emitido em {cert.dataEmissao.toLocaleDateString('pt-BR')}
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">
+                    <Clock className="w-4 h-4" />
+                    Carga horária: {cert.carga_horaria} horas
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-gray-50 flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Código SIGEA</span>
+                    <span className="text-sm font-mono font-bold text-indigo-600">{cert.codigo}</span>
+                  </div>
+                  <button 
+                    onClick={() => { navigator.clipboard.writeText(cert.codigo); alert('Código copiado!'); }}
+                    className="text-xs font-black text-gray-400 hover:text-indigo-600 uppercase tracking-widest flex items-center gap-1"
+                  >
+                    <Copy className="w-3 h-3" />
+                    Copiar
+                  </button>
+                </div>
+              </motion.div>
+            ))
+          )}
+        </AnimatePresence>
       </main>
     </div>
   );
