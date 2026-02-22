@@ -28,7 +28,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const initialized = useRef(false);
+  const isInitialMount = useRef(true);
 
   const fetchProfile = useCallback(async (supabaseUser: SupabaseUser) => {
     try {
@@ -62,29 +62,32 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
+    if (!isInitialMount.current) return;
+    isInitialMount.current = false;
 
-    // Função para inicializar a sessão de forma síncrona com o estado do Supabase
-    const initAuth = async () => {
+    // 1. Tenta recuperar a sessão inicial imediatamente
+    const initializeAuth = async () => {
       const { data: { session: initialSession } } = await supabase.auth.getSession();
       
       if (initialSession) {
         setSession(initialSession);
         await fetchProfile(initialSession.user);
       } else {
+        // Se não houver sessão, paramos o loading aqui
         setLoading(false);
       }
     };
 
-    initAuth();
+    initializeAuth();
 
-    // Listener para mudanças de estado (login, logout, refresh de token)
+    // 2. Escuta mudanças de estado (Login, Logout, Refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      console.log(`[UserContext] Auth Event: ${event}`);
+      
+      if (currentSession) {
         setSession(currentSession);
-        if (currentSession) await fetchProfile(currentSession.user);
-      } else if (event === 'SIGNED_OUT') {
+        await fetchProfile(currentSession.user);
+      } else {
         setSession(null);
         setUser(null);
         setLoading(false);
@@ -95,17 +98,25 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   }, [fetchProfile]);
 
   const login = async (email: string, password: string) => {
+    setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    if (error) {
+      setLoading(false);
+      throw error;
+    }
   };
 
   const signUp = async (email: string, password: string, metadata: any) => {
+    setLoading(true);
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: metadata }
     });
-    if (error) throw error;
+    if (error) {
+      setLoading(false);
+      throw error;
+    }
   };
 
   const loginWithGoogle = async () => {
