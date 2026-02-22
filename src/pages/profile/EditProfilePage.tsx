@@ -12,8 +12,6 @@ export default function EditProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [nome, setNome] = useState(user?.nome || '');
-  const [nomeCertificado, setNomeCertificado] = useState(user?.nome_certificado || '');
-  const [telefone, setTelefone] = useState(user?.telefone || '');
   const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || '');
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -41,6 +39,7 @@ export default function EditProfilePage() {
       const fileName = `${user.id}-${Math.random()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
+      // Nota: Certifique-se que o bucket 'profiles' existe no seu Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('profiles')
         .upload(filePath, file);
@@ -54,7 +53,7 @@ export default function EditProfilePage() {
       setAvatarUrl(publicUrl);
     } catch (err: any) {
       console.error('Erro no upload:', err);
-      setError('Erro ao subir imagem.');
+      setError('Erro ao subir imagem. Verifique se o bucket "profiles" existe.');
     } finally {
       setIsUploading(false);
     }
@@ -62,8 +61,8 @@ export default function EditProfilePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nome || !nomeCertificado) {
-      setError('O nome de exibição e o nome do certificado são obrigatórios.');
+    if (!nome) {
+      setError('O nome de exibição é obrigatório.');
       return;
     }
 
@@ -72,13 +71,12 @@ export default function EditProfilePage() {
     try {
       await updateProfile({ 
         nome, 
-        nome_certificado: nomeCertificado, 
-        telefone, 
         avatar_url: avatarUrl 
       });
       alert('Perfil atualizado com sucesso!');
       navigate('/perfil');
     } catch (err: any) {
+      console.error('Erro ao atualizar:', err);
       setError('Erro ao atualizar perfil. Tente novamente.');
     } finally {
       setIsLoading(false);
@@ -134,43 +132,17 @@ export default function EditProfilePage() {
 
           <div className="grid grid-cols-1 gap-6">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Nome de Exibição (App)</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Nome Completo</label>
               <input 
                 type="text" 
                 value={nome} 
                 onChange={(e) => setNome(e.target.value)} 
                 required 
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all"
-                placeholder="Como quer ser chamado no app"
+                placeholder="Seu nome completo"
               />
+              <p className="text-[10px] text-gray-400 mt-2 font-medium">Este nome será utilizado no sistema e nos seus certificados.</p>
             </div>
-
-            <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
-              <label className="flex items-center gap-2 text-sm font-bold text-indigo-900 mb-2">
-                <FileText className="w-4 h-4" />
-                Nome Completo (Para Certificados)
-              </label>
-              <input 
-                type="text" 
-                value={nomeCertificado} 
-                onChange={(e) => setNomeCertificado(e.target.value)} 
-                required 
-                className="w-full px-4 py-3 bg-white border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                placeholder="Seu nome completo oficial"
-              />
-              <p className="text-[10px] text-indigo-600 mt-2 font-medium">Este nome será impresso em todos os seus certificados digitais.</p>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Telefone</label>
-            <input 
-              type="tel" 
-              value={telefone} 
-              onChange={(e) => setTelefone(e.target.value)} 
-              placeholder="(00) 00000-0000"
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all"
-            />
           </div>
 
           {error && (

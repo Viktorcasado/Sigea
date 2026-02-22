@@ -41,7 +41,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
         setUser({
           id: profile.id,
           nome: profile.full_name || supabaseUser.user_metadata?.full_name || 'Usuário',
-          nome_certificado: profile.certificate_full_name || profile.full_name || '',
+          nome_certificado: profile.full_name || '', // Usando full_name como fallback
           email: supabaseUser.email || '',
           perfil: profile.user_type || 'comunidade_externa',
           status: deriveStatus(profile.user_type, profile.is_organizer || false),
@@ -137,15 +137,21 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
 
   const updateProfile = async (updates: Partial<User>) => {
     if (!user) return;
-    const { error } = await supabase.from('profiles').update({
-      full_name: updates.nome,
-      certificate_full_name: updates.nome_certificado,
-      campus: updates.campus,
-      registration_number: updates.matricula,
-      avatar_url: updates.avatar_url,
-      user_type: updates.perfil,
-      is_organizer: updates.is_organizer
-    }).eq('id', user.id);
+    
+    // Mapeia apenas as colunas que existem na tabela 'profiles'
+    const payload: any = {};
+    if (updates.nome) payload.full_name = updates.nome;
+    if (updates.campus) payload.campus = updates.campus;
+    if (updates.matricula) payload.registration_number = updates.matricula;
+    if (updates.avatar_url) payload.avatar_url = updates.avatar_url;
+    if (updates.perfil) payload.user_type = updates.perfil;
+    if (updates.is_organizer !== undefined) payload.is_organizer = updates.is_organizer;
+
+    const { error } = await supabase
+      .from('profiles')
+      .update(payload)
+      .eq('id', user.id);
+
     if (error) throw error;
     setUser(prev => prev ? { ...prev, ...updates } : null);
   };
