@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useState, useContext, ReactNode, FC, useEffect, useCallback } from 'react';
+import { createContext, useState, useContext, ReactNode, FC, useEffect, useCallback, useRef } from 'react';
 import { User, UserStatus } from '@/src/types';
 import { supabase } from '@/src/integrations/supabase/client';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
@@ -28,15 +28,18 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const initialized = useRef(false);
 
   const fetchProfile = useCallback(async (supabaseUser: SupabaseUser) => {
     try {
-      const { data: profile } = await supabase
+      const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', supabaseUser.id)
         .maybeSingle();
       
+      if (error) throw error;
+
       if (profile) {
         return {
           id: profile.id,
@@ -62,26 +65,30 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
         username: supabaseUser.email?.split('@')[0] || 'user'
       } as User;
     } catch (err) {
-      console.error("Erro ao buscar perfil:", err);
+      console.error("[UserContext] Erro ao buscar perfil:", err);
       return null;
     }
   }, []);
 
   useEffect(() => {
-    // 1. Check initial session
+    if (initialized.current) return;
+    initialized.current = true;
+
     const initAuth = async () => {
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
-      setSession(initialSession);
-      if (initialSession) {
-        const profile = await fetchProfile(initialSession.user);
-        setUser(profile);
+      try {
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        setSession(initialSession);
+        if (initialSession) {
+          const profile = await fetchProfile(initialSession.user);
+          setUser(profile);
+        }
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     initAuth();
 
-    // 2. Listen for changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       setSession(currentSession);
       if (currentSession) {
@@ -111,11 +118,10 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   };
 
   const loginWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({ 
+    await supabase.auth.signInWithOAuth({ 
       provider: 'google',
       options: { redirectTo: `${window.location.origin}/auth/callback` }
     });
-    if (error) throw error;
   };
 
   const logout = async () => {
@@ -125,7 +131,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
 
   const updateProfile = async (updates: Partial<User>) => {
     if (!user) return;
-    await supabase.from('profiles').update({
+    const { error } = await supabase.from('profiles').update({
       full_name: updates.nome,
       campus: updates.campus,
       registration_number: updates.matricula,
@@ -133,6 +139,8 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
       user_type: updates.perfil,
       is_organizer: updates.is_organizer
     }).eq('id', user.id);
+    
+    if (error) throw error;
     setUser(prev => prev ? { ...prev, ...updates } : null);
   };
 
