@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useUser } from '@/src/contexts/UserContext';
+import { useToast } from '@/src/contexts/ToastContext';
 import { Activity, Event } from '@/src/types';
 import { ActivityRepository } from '@/src/repositories/ActivityRepository';
 import { supabase } from '@/src/integrations/supabase/client';
@@ -13,6 +14,7 @@ import { shareContent, formatActivityShare } from '@/src/utils/share';
 export default function SchedulePage() {
   const { id: eventId } = useParams<{ id: string }>();
   const { user } = useUser();
+  const { showToast } = useToast();
   const [event, setEvent] = useState<Event | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +41,8 @@ export default function SchedulePage() {
             campus: eventData.campus || '',
             instituicao: 'IFAL',
             modalidade: 'Presencial',
-            status: 'publicado'
+            status: 'publicado',
+            carga_horaria: eventData.workload || 0
           });
         }
 
@@ -66,7 +69,7 @@ export default function SchedulePage() {
 
   const handleShareActivity = (activity: Activity) => {
     if (event) {
-      shareContent(formatActivityShare(event, activity));
+      shareContent(formatActivityShare(event, activity), showToast);
     }
   };
 

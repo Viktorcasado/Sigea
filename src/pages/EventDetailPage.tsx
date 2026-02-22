@@ -9,7 +9,7 @@ import { supabase } from '@/src/integrations/supabase/client';
 import { Event } from '@/src/types';
 import { ArrowLeft, Share2, Calendar, MapPin, Award, CheckCircle, Clock, Settings } from 'lucide-react';
 import { motion } from 'motion/react';
-import { handleShare, formatEventShare } from '@/src/utils/share';
+import { shareContent, formatEventShare } from '@/src/utils/share';
 
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -48,7 +48,8 @@ export default function EventDetailPage() {
           modalidade: 'Presencial',
           status: 'publicado',
           vagas: eventData.workload,
-          organizer_id: eventData.organizer_id
+          organizer_id: eventData.organizer_id,
+          carga_horaria: eventData.workload || 0
         });
 
         if (user) {
@@ -162,7 +163,7 @@ export default function EventDetailPage() {
 
   const onShare = () => {
     if (event) {
-      handleShare(formatEventShare(event), showToast);
+      shareContent(formatEventShare(event), showToast);
     }
   };
 
