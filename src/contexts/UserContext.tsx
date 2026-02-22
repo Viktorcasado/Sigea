@@ -31,6 +31,20 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
 
   const fetchProfile = async (supabaseUser: SupabaseUser) => {
     try {
+      // Primeiro, definimos um usuário básico baseado nos metadados da conta (fallback imediato)
+      const basicUser: User = {
+        id: supabaseUser.id,
+        nome: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Usuário',
+        email: supabaseUser.email || '',
+        perfil: 'comunidade_externa',
+        status: 'ativo_comunidade',
+        is_organizer: false,
+        username: supabaseUser.email?.split('@')[0] || 'user'
+      };
+      
+      setUser(basicUser);
+
+      // Agora buscamos os dados detalhados na tabela profiles
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
@@ -40,8 +54,8 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
       if (profile) {
         setUser({
           id: profile.id,
-          nome: profile.full_name || 'Usuário',
-          username: profile.full_name?.split(' ')[0].toLowerCase() || 'user',
+          nome: profile.full_name || basicUser.nome,
+          username: profile.full_name?.split(' ')[0].toLowerCase() || basicUser.username,
           email: supabaseUser.email || '',
           perfil: profile.user_type || 'comunidade_externa',
           status: deriveStatus(profile.user_type, profile.is_organizer || false),
@@ -135,7 +149,6 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
 
     if (error) throw error;
     
-    // Atualiza o estado local após sucesso no DB
     setUser(prev => prev ? { ...prev, ...updates } : null);
   };
 
