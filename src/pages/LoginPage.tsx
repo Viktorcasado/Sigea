@@ -1,31 +1,18 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useUser } from '@/src/contexts/UserContext';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Eye, EyeOff, Loader2, Mail, Lock, ArrowLeft } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export default function LoginPage() {
-  const { user, loading, login, loginWithGoogle } = useUser();
-  const navigate = useNavigate();
-  const location = useLocation();
-
+  const { login, loginWithGoogle } = useUser();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Redireciona apenas quando o carregamento terminar e o usuário existir
-  useEffect(() => {
-    if (!loading && user) {
-      const from = (location.state as any)?.from?.pathname || "/";
-      // Evita redirecionar para o próprio login
-      const target = from === '/login' ? '/' : from;
-      navigate(target, { replace: true });
-    }
-  }, [user, loading, navigate, location]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,20 +21,12 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
-      // O redirecionamento é tratado pelo useEffect acima
+      // O redirecionamento é feito pelo PublicRoute no App.tsx
     } catch (err: any) {
       setError('E-mail ou senha incorretos.');
       setIsSubmitting(false);
     }
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
-      </div>
-    );
-  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4 font-sans">

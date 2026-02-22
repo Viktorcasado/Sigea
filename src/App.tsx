@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { UserProvider, useUser } from './contexts/UserContext';
+import { UserProvider } from './contexts/UserContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ToastProvider } from './contexts/ToastContext';
 import Layout from './components/Layout';
@@ -34,6 +34,7 @@ import AboutPage from './pages/system/AboutPage';
 import NotificationsPage from './pages/NotificationsPage';
 import CreateEventPage from './pages/CreateEventPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import PublicRoute from './components/PublicRoute';
 import SchedulePage from './pages/event/SchedulePage';
 import ManageActivitiesPage from './pages/event/ManageActivitiesPage';
 import ActivityFormPage from './pages/event/ActivityFormPage';
@@ -58,19 +59,24 @@ export default function App() {
 function AppRoutes() {
   return (
     <Routes>
-      {/* Rotas Públicas */}
+      {/* Rotas Públicas de Sistema */}
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
       <Route path="/validar-certificado" element={<ValidateCertificatePage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
       
+      {/* Rotas que redirecionam se logado */}
+      <Route element={<PublicRoute />}>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+      </Route>
+      
+      {/* Layout Principal */}
       <Route path="/" element={<Layout />}>
         <Route index element={<HomePage />} />
         <Route path="explorar" element={<ExplorePage />} />
         <Route path="evento/:id" element={<EventDetailPage />} />
         
-        {/* Rotas que exigem login dentro do Layout principal */}
+        {/* Rotas Protegidas dentro do Layout */}
         <Route element={<ProtectedRoute />}>
           <Route path="certificados" element={<CertificatesPage />} />
           <Route path="perfil" element={<ProfilePage />} />
@@ -78,7 +84,7 @@ function AppRoutes() {
         </Route>
       </Route>
 
-      {/* Rotas Protegidas (Fora do Layout principal) */}
+      {/* Rotas Protegidas Fora do Layout */}
       <Route element={<ProtectedRoute />}>
         <Route path="/perfil/editar" element={<EditProfilePage />} />
         <Route path="/perfil/instituicao-campus" element={<InstitutionPage />} />

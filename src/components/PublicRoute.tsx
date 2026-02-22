@@ -1,10 +1,9 @@
 import { useUser } from '@/src/contexts/UserContext';
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 
-const ProtectedRoute = () => {
+const PublicRoute = () => {
   const { user, loading } = useUser();
-  const location = useLocation();
 
   if (loading) {
     return (
@@ -14,11 +13,11 @@ const ProtectedRoute = () => {
     );
   }
 
-  if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+  if (user) {
+    return <Navigate to="/" replace />;
   }
 
   return <Outlet />;
 };
 
-export default ProtectedRoute;
+export default PublicRoute;

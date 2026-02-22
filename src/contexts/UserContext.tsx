@@ -28,7 +28,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const isInitialLoad = useRef(true);
+  const initialized = useRef(false);
 
   const fetchProfile = useCallback(async (supabaseUser: SupabaseUser) => {
     try {
@@ -68,74 +68,55 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    let mounted = true;
+    if (initialized.current) return;
+    initialized.current = true;
 
     const initializeAuth = async () => {
       try {
         const { data: { session: initialSession } } = await supabase.auth.getSession();
-        if (!mounted) return;
-
         if (initialSession) {
           setSession(initialSession);
           await fetchProfile(initialSession.user);
         }
       } catch (err) {
-        console.error("[UserContext] Erro na inicialização:", err);
+        console.error("[UserContext] Erve na inicialização:", err);
       } finally {
-        if (mounted) {
-          setLoading(false);
-          isInitialLoad.current = false;
-        }
+        setLoading(false);
       }
     };
 
     initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      if (!mounted) return;
-      
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         setSession(currentSession);
         if (currentSession) {
-          setLoading(true);
           await fetchProfile(currentSession.user);
         }
       } else if (event === 'SIGNED_OUT') {
         setSession(null);
         setUser(null);
       }
-      
-      if (!isInitialLoad.current) {
-        setLoading(false);
-      }
+      setLoading(false);
     });
 
     return () => {
-      mounted = false;
       subscription.unsubscribe();
     };
   }, [fetchProfile]);
 
   const login = async (email: string, password: string) => {
-    setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      setLoading(false);
-      throw error;
-    }
+    if (error) throw error;
   };
 
   const signUp = async (email: string, password: string, metadata: any) => {
-    setLoading(true);
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: metadata }
     });
-    if (error) {
-      setLoading(false);
-      throw error;
-    }
+    if (error) throw error;
   };
 
   const loginWithGoogle = async () => {
@@ -146,9 +127,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   };
 
   const logout = async () => {
-    setLoading(true);
     await supabase.auth.signOut();
-    setLoading(false);
   };
 
   const updateProfile = async (updates: Partial<User>) => {
