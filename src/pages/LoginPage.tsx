@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useUser } from '@/src/contexts/UserContext';
 import { Link } from 'react-router-dom';
 import { Loader2, ArrowLeft, Mail, Lock, Eye, EyeOff } from 'lucide-react';
-import { motion } from 'motion/react';
 
 export default function LoginPage() {
   const { login, loginWithGoogle, loading } = useUser();
@@ -23,9 +22,8 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
-      // O redirecionamento será tratado pelo PublicRoute no App.tsx assim que o estado mudar
     } catch (err: any) {
-      setError('E-mail ou senha incorretos. Tente novamente.');
+      setError('E-mail ou senha incorretos.');
       setIsLocalLoading(false);
     }
   };
@@ -43,11 +41,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4 font-sans">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md p-8 space-y-6 bg-white rounded-3xl shadow-xl border border-gray-100"
-      >
+      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-3xl shadow-xl border border-gray-100">
         <div className="text-center">
           <Link to="/" className="inline-flex items-center gap-2 mb-6 text-indigo-600 font-bold hover:text-indigo-700 transition-colors">
             <ArrowLeft className="w-4 h-4" />
@@ -143,7 +137,7 @@ export default function LoginPage() {
             </Link>
           </p>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

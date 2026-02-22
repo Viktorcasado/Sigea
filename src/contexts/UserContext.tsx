@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useState, useContext, ReactNode, FC, useEffect, useCallback } from 'react';
+import { createContext, useState, useContext, ReactNode, FC, useEffect, useCallback, useRef } from 'react';
 import { User, UserStatus } from '@/src/types';
 import { supabase } from '@/src/integrations/supabase/client';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
@@ -28,6 +28,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const initialized = useRef(false);
 
   const fetchProfile = useCallback(async (supabaseUser: SupabaseUser) => {
     try {
@@ -39,7 +40,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
       
       if (error) throw error;
 
-      const userData: User = profile ? {
+      return profile ? {
         id: profile.id,
         nome: profile.full_name || supabaseUser.user_metadata?.full_name || 'Usuário',
         username: profile.full_name?.split(' ')[0].toLowerCase() || supabaseUser.email?.split('@')[0] || 'user',
@@ -50,7 +51,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
         campus: profile.campus || '',
         matricula: profile.registration_number || '',
         avatar_url: profile.avatar_url || ''
-      } : {
+      } as User : {
         id: supabaseUser.id,
         nome: supabaseUser.user_metadata?.full_name || 'Usuário',
         email: supabaseUser.email || '',
@@ -58,9 +59,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
         status: 'ativo_comunidade',
         is_organizer: false,
         username: supabaseUser.email?.split('@')[0] || 'user'
-      };
-
-      return userData;
+      } as User;
     } catch (err) {
       console.error("[UserContext] Erro ao buscar perfil:", err);
       return null;
@@ -68,49 +67,35 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    let mounted = true;
+    if (initialized.current) return;
+    initialized.current = true;
 
-    const initialize = async () => {
-      try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
-        
-        if (!mounted) return;
-
-        if (initialSession) {
-          setSession(initialSession);
-          const profile = await fetchProfile(initialSession.user);
-          if (mounted) setUser(profile);
-        }
-      } catch (err) {
-        console.error("[UserContext] Erro na inicialização:", err);
-      } finally {
-        if (mounted) setLoading(false);
+    // 1. Check initial session
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+      if (initialSession) {
+        setSession(initialSession);
+        fetchProfile(initialSession.user).then(profile => {
+          setUser(profile);
+          setLoading(false);
+        });
+      } else {
+        setLoading(false);
       }
-    };
-
-    initialize();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      if (!mounted) return;
-
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        setSession(currentSession);
-        if (currentSession) {
-          const profile = await fetchProfile(currentSession.user);
-          if (mounted) setUser(profile);
-        }
-      } else if (event === 'SIGNED_OUT') {
-        setSession(null);
-        setUser(null);
-      }
-      
-      if (mounted) setLoading(false);
     });
 
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
+    // 2. Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      setSession(currentSession);
+      if (currentSession) {
+        const profile = await fetchProfile(currentSession.user);
+        setUser(profile);
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, [fetchProfile]);
 
   const login = async (email: string, password: string) => {

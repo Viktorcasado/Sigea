@@ -3,7 +3,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 
 const PublicRoute = () => {
-  const { user, loading } = useUser();
+  const { session, loading } = useUser();
 
   if (loading) {
     return (
@@ -13,8 +13,8 @@ const PublicRoute = () => {
     );
   }
 
-  // Se o usuário já estiver logado, não permite acessar páginas públicas como Login/Register
-  if (user) {
+  // Se houver sessão, redireciona para a home
+  if (session) {
     return <Navigate to="/" replace />;
   }
 

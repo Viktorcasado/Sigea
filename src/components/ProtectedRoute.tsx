@@ -3,7 +3,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 
 const ProtectedRoute = () => {
-  const { user, loading } = useUser();
+  const { session, loading } = useUser();
   const location = useLocation();
 
   if (loading) {
@@ -14,7 +14,8 @@ const ProtectedRoute = () => {
     );
   }
 
-  if (!user) {
+  // Usamos session em vez de user para evitar loops enquanto o perfil carrega
+  if (!session) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
