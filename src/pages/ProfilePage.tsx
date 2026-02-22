@@ -11,9 +11,7 @@ import {
   LogOut, 
   Calendar, 
   Clock, 
-  FileQuestion, 
   Info, 
-  BookOpen,
   Bell,
   Settings,
   LayoutDashboard
@@ -21,19 +19,26 @@ import {
 import ProfileHeader from '@/src/components/profile/ProfileHeader';
 import ProfileMenuItem from '@/src/components/profile/ProfileMenuItem';
 import ProfileSection from '@/src/components/profile/ProfileSection';
-import OrganizerMenu from '@/src/components/profile/OrganizerMenu';
 import { motion } from 'motion/react';
 
 export default function ProfilePage() {
-  const { user, logout } = useUser();
+  const { user, logout, loading } = useUser();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     if (window.confirm('Tem certeza que deseja encerrar a sessão?')) {
       await logout();
-      navigate('/login');
+      navigate('/login', { replace: true });
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   if (!user) return null;
 
@@ -45,31 +50,25 @@ export default function ProfilePage() {
     >
       <ProfileHeader user={user} />
 
-      {/* Atalho para Painel do Gestor se tiver permissão */}
-      {(user.is_organizer || user.perfil === 'aluno') && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <ProfileSection title="Área Administrativa">
-            <ProfileMenuItem 
-              to="/gestor/painel" 
-              icon={LayoutDashboard} 
-              label="Painel de Controle" 
-              description="Gerenciar eventos, inscritos e certificados"
-              variant="success"
-            />
-          </ProfileSection>
-        </motion.div>
+      {/* Área Administrativa */}
+      {(user.is_organizer || user.perfil === 'admin') && (
+        <ProfileSection title="Área Administrativa">
+          <ProfileMenuItem 
+            to="/gestor/painel" 
+            icon={LayoutDashboard} 
+            label="Painel de Controle" 
+            description="Gerenciar eventos, inscritos e certificados"
+            variant="success"
+          />
+        </ProfileSection>
       )}
 
-      <ProfileSection title="Minha Conta" delay={0.2}>
+      <ProfileSection title="Minha Conta" delay={0.1}>
         <ProfileMenuItem 
           to="/perfil/editar" 
           icon={UserIcon} 
           label="Dados Pessoais" 
-          description="Nome, e-mail e telefone"
+          description="Nome, e-mail e foto"
         />
         <ProfileMenuItem 
           to="/perfil/instituicao-campus" 
@@ -85,7 +84,7 @@ export default function ProfilePage() {
         />
       </ProfileSection>
 
-      <ProfileSection title="Atividades" delay={0.3}>
+      <ProfileSection title="Atividades" delay={0.2}>
         <ProfileMenuItem 
           to="/perfil/eventos-inscritos" 
           icon={Calendar} 
@@ -106,7 +105,7 @@ export default function ProfilePage() {
         />
       </ProfileSection>
 
-      <ProfileSection title="Preferências e Suporte" delay={0.4}>
+      <ProfileSection title="Preferências e Suporte" delay={0.3}>
         <ProfileMenuItem 
           to="/notificacoes" 
           icon={Bell} 

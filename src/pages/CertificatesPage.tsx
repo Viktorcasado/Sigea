@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BadgeCheck, Download, Copy, Award, Search } from 'lucide-react';
+import { BadgeCheck, Download, Copy, Award, Search, Loader2 } from 'lucide-react';
 import { useUser } from '@/src/contexts/UserContext';
 import { supabase } from '@/src/integrations/supabase/client';
 import { Certificate } from '@/src/types';
@@ -11,50 +11,58 @@ import QRCode from 'qrcode';
 import { motion } from 'motion/react';
 
 export default function CertificatesPage() {
-  const { user } = useUser();
+  const { user, loading: userLoading } = useUser();
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchCertificates = async () => {
-    if (!user) return;
-    setLoading(true);
-
-    const { data, error } = await supabase
-      .from('certificados')
-      .select(`
-        *,
-        events:evento_id (*)
-      `)
-      .eq('user_id', user.id);
-
-    if (!error && data) {
-      const formatted: Certificate[] = data.map(c => ({
-        id: c.id,
-        userId: c.user_id,
-        eventoId: c.evento_id,
-        codigo: c.codigo_certificado,
-        dataEmissao: new Date(c.emitido_em),
-        event: c.events ? {
-          id: c.events.id,
-          titulo: c.events.title,
-          instituicao: 'IFAL',
-          campus: c.events.campus,
-          dataInicio: new Date(c.events.date),
-          local: c.events.location || '',
-          descricao: c.events.description || '',
-          modalidade: 'Presencial',
-          status: 'publicado',
-          carga_horaria: c.events.workload || 0
-        } : undefined
-      }));
-      setCertificates(formatted);
-    }
-    setLoading(false);
-  };
-
   useEffect(() => {
+    const fetchCertificates = async () => {
+      if (!user) {
+        if (!userLoading) setLoading(false);
+        return;
+      }
+      
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('certificados')
+          .select(`
+            *,
+            events:evento_id (*)
+          `)
+          .eq('user_id', user.id);
+
+        if (!error && data) {
+          const formatted: Certificate[] = data.map(c => ({
+            id: c.id,
+            userId: c.user_id,
+            eventoId: c.evento_id,
+            codigo: c.codigo_certificado,
+            dataEmissao: new Date(c.emitido_em),
+            event: c.events ? {
+              id: c.events.id,
+              titulo: c.events.title,
+              instituicao: 'IFAL',
+              campus: c.events.campus,
+              dataInicio: new Date(c.events.date),
+              local: c.events.location || '',
+              descricao: c.events.description || '',
+              modalidade: 'Presencial',
+              status: 'publicado',
+              carga_horaria: c.events.workload || 0
+            } : undefined
+          }));
+          setCertificates(formatted);
+        }
+      } catch (err) {
+        console.error("Erro ao buscar certificados:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchCertificates();
-  }, [user]);
+  }, [user, userLoading]);
 
   const generatePdf = async (cert: Certificate) => {
     if (!cert.event) return;
@@ -84,8 +92,7 @@ export default function CertificatesPage() {
     doc.setFontSize(32);
     doc.setTextColor(79, 70, 229);
     doc.setFont('helvetica', 'bold');
-    // USA O NOME DO CERTIFICADO SE EXISTIR, SENÃO O NOME DO APP
-    doc.text(user?.nome_certificado || user?.nome || 'Participante', 148.5, 110, { align: 'center' });
+    doc.text(user?.nome || 'Participante', 148.5, 110, { align: 'center' });
 
     doc.setFontSize(18);
     doc.setFont('helvetica', 'normal');
@@ -93,7 +100,6 @@ export default function CertificatesPage() {
     doc.text(`participou com êxito do evento "${cert.event.titulo}"`, 148.5, 130, { align: 'center' });
     doc.text(`realizado em ${cert.event.dataInicio.toLocaleDateString('pt-BR')} no campus ${cert.event.campus}`, 148.5, 140, { align: 'center' });
     
-    // ADICIONA A CARGA HORÁRIA NO TEXTO
     doc.setFont('helvetica', 'bold');
     doc.text(`com carga horária total de ${cert.event.carga_horaria} horas.`, 148.5, 150, { align: 'center' });
 
@@ -106,6 +112,15 @@ export default function CertificatesPage() {
 
     doc.save(`certificado-${cert.codigo}.pdf`);
   };
+
+  if (loading || userLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+        <Loader2 className="w-10 h-10 animate-spin mb-4" />
+        <p className="font-medium">Carregando seus certificados...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -126,9 +141,7 @@ export default function CertificatesPage() {
       </div>
 
       <main className="space-y-4">
-        {loading ? (
-          [1, 2, 3].map(i => <div key={i} className="h-32 bg-gray-100 animate-pulse rounded-2xl" />)
-        ) : certificates.length === 0 ? (
+        {certificates.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-3xl border border-gray-100">
             <Award className="w-16 h-16 mx-auto text-gray-200 mb-4" />
             <h3 className="text-xl font-bold text-gray-700">Nenhum certificado ainda</h3>

@@ -31,18 +31,6 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
 
   const fetchProfile = async (supabaseUser: SupabaseUser) => {
     try {
-      const basicUser: User = {
-        id: supabaseUser.id,
-        nome: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Usuário',
-        email: supabaseUser.email || '',
-        perfil: 'comunidade_externa',
-        status: 'ativo_comunidade',
-        is_organizer: false,
-        username: supabaseUser.email?.split('@')[0] || 'user'
-      };
-      
-      setUser(basicUser);
-
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
@@ -52,8 +40,8 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
       if (profile && !error) {
         setUser({
           id: profile.id,
-          nome: profile.full_name || basicUser.nome,
-          username: profile.full_name?.split(' ')[0].toLowerCase() || basicUser.username,
+          nome: profile.full_name || supabaseUser.user_metadata?.full_name || 'Usuário',
+          username: profile.full_name?.split(' ')[0].toLowerCase() || supabaseUser.email?.split('@')[0] || 'user',
           email: supabaseUser.email || '',
           perfil: profile.user_type || 'comunidade_externa',
           status: deriveStatus(profile.user_type, profile.is_organizer || false),
@@ -62,6 +50,17 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
           matricula: profile.registration_number || '',
           avatar_url: profile.avatar_url || ''
         } as User);
+      } else {
+        // Perfil básico se não encontrar no banco
+        setUser({
+          id: supabaseUser.id,
+          nome: supabaseUser.user_metadata?.full_name || 'Usuário',
+          email: supabaseUser.email || '',
+          perfil: 'comunidade_externa',
+          status: 'ativo_comunidade',
+          is_organizer: false,
+          username: supabaseUser.email?.split('@')[0] || 'user'
+        } as User);
       }
     } catch (err) {
       console.error("[UserContext] Erro ao buscar perfil:", err);
@@ -69,29 +68,18 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   };
 
   useEffect(() => {
-    let isMounted = true;
-
     const initialize = async () => {
-      try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
-        if (isMounted) {
-          setSession(initialSession);
-          if (initialSession) {
-            await fetchProfile(initialSession.user);
-          }
-        }
-      } catch (err) {
-        console.error("[UserContext] Erro na inicialização:", err);
-      } finally {
-        if (isMounted) setLoading(false);
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      setSession(initialSession);
+      if (initialSession) {
+        await fetchProfile(initialSession.user);
       }
+      setLoading(false);
     };
 
     initialize();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      if (!isMounted) return;
-      
       setSession(currentSession);
       if (currentSession) {
         await fetchProfile(currentSession.user);
@@ -101,15 +89,8 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
       setLoading(false);
     });
 
-    // Timeout de segurança para garantir que o loading saia da tela
-    const timeout = setTimeout(() => {
-      if (isMounted && loading) setLoading(false);
-    }, 5000);
-
     return () => {
-      isMounted = false;
       subscription.unsubscribe();
-      clearTimeout(timeout);
     };
   }, []);
 
@@ -138,9 +119,9 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
     setLoading(true);
     try {
       await supabase.auth.signOut();
-    } finally {
-      setSession(null);
       setUser(null);
+      setSession(null);
+    } finally {
       setLoading(false);
     }
   };

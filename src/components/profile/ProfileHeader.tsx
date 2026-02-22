@@ -13,7 +13,8 @@ const ProfileHeader = ({ user }: ProfileHeaderProps) => {
   if (!user) return null;
 
   const getInitials = (name: string) => {
-    const names = name.split(' ');
+    if (!name) return 'U';
+    const names = name.trim().split(' ');
     if (names.length > 1) {
       return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
     }
@@ -42,11 +43,21 @@ const ProfileHeader = ({ user }: ProfileHeaderProps) => {
       className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center text-center sm:flex-row sm:text-left sm:items-center gap-6"
     >
       <div className="relative">
-        {user.avatar_url ? (
+        {user.avatar_url && user.avatar_url.startsWith('http') ? (
           <img 
             src={user.avatar_url} 
             alt={user.nome} 
             className="w-24 h-24 rounded-full object-cover shadow-lg border-4 border-white"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+              const parent = (e.target as HTMLImageElement).parentElement;
+              if (parent) {
+                const fallback = document.createElement('div');
+                fallback.className = "w-24 h-24 bg-linear-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-3xl font-extrabold shadow-lg";
+                fallback.innerText = getInitials(user.nome);
+                parent.appendChild(fallback);
+              }
+            }}
           />
         ) : (
           <div className="w-24 h-24 bg-linear-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-3xl font-extrabold shadow-lg">
