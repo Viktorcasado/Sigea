@@ -13,6 +13,7 @@ const PublicRoute = () => {
     );
   }
 
+  // Se já estiver logado (tiver sessão), manda para a home
   if (session) {
     return <Navigate to="/" replace />;
   }

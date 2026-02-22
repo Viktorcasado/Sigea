@@ -37,18 +37,22 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
         .eq('id', supabaseUser.id)
         .maybeSingle();
       
-      return profile ? {
-        id: profile.id,
-        nome: profile.full_name || supabaseUser.user_metadata?.full_name || 'Usuário',
-        username: profile.full_name?.split(' ')[0].toLowerCase() || supabaseUser.email?.split('@')[0] || 'user',
-        email: supabaseUser.email || '',
-        perfil: profile.user_type || 'comunidade_externa',
-        status: deriveStatus(profile.user_type, profile.is_organizer || false),
-        is_organizer: profile.is_organizer || false,
-        campus: profile.campus || '',
-        matricula: profile.registration_number || '',
-        avatar_url: profile.avatar_url || ''
-      } as User : {
+      if (profile) {
+        return {
+          id: profile.id,
+          nome: profile.full_name || supabaseUser.user_metadata?.full_name || 'Usuário',
+          username: profile.full_name?.split(' ')[0].toLowerCase() || supabaseUser.email?.split('@')[0] || 'user',
+          email: supabaseUser.email || '',
+          perfil: profile.user_type || 'comunidade_externa',
+          status: deriveStatus(profile.user_type, profile.is_organizer || false),
+          is_organizer: profile.is_organizer || false,
+          campus: profile.campus || '',
+          matricula: profile.registration_number || '',
+          avatar_url: profile.avatar_url || ''
+        } as User;
+      }
+      
+      return {
         id: supabaseUser.id,
         nome: supabaseUser.user_metadata?.full_name || 'Usuário',
         email: supabaseUser.email || '',
@@ -58,13 +62,14 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
         username: supabaseUser.email?.split('@')[0] || 'user'
       } as User;
     } catch (err) {
+      console.error("Erro ao buscar perfil:", err);
       return null;
     }
   }, []);
 
   useEffect(() => {
-    // Inicialização única
-    const init = async () => {
+    // 1. Check initial session
+    const initAuth = async () => {
       const { data: { session: initialSession } } = await supabase.auth.getSession();
       setSession(initialSession);
       if (initialSession) {
@@ -74,8 +79,9 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
       setLoading(false);
     };
 
-    init();
+    initAuth();
 
+    // 2. Listen for changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       setSession(currentSession);
       if (currentSession) {

@@ -14,6 +14,7 @@ const ProtectedRoute = () => {
     );
   }
 
+  // Se não houver sessão, manda para o login
   if (!session) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useUser } from '@/src/contexts/UserContext';
 import { Link } from 'react-router-dom';
-import { Loader2, ArrowLeft, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Loader2, ArrowLeft, Mail, Lock, Eye, EyeOff } from 'lucide-center';
 
 export default function LoginPage() {
   const { login, loginWithGoogle, loading } = useUser();
