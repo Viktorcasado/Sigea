@@ -1,17 +1,18 @@
-import { useState, useEffect } from 'react';
+"use client";
+
+import { useEffect } from 'react';
+import { Auth } from '@supabase/auth-ui-react';
+import { ThemeSupa } from '@supabase/auth-ui-shared';
+import { supabase } from '@/src/integrations/supabase/client';
 import { useUser } from '@/src/contexts/UserContext';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
+import { motion } from 'motion/react';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const { login, loginWithGoogle, session, loading } = useUser();
+  const { session, loading } = useUser();
   const navigate = useNavigate();
   const location = useLocation();
-  const [showPassword, setShowPassword] = useState(false);
 
   // Redireciona se já estiver logado
   useEffect(() => {
@@ -20,37 +21,6 @@ export default function LoginPage() {
       navigate(from, { replace: true });
     }
   }, [session, loading, navigate, location]);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      await login(email, password);
-      // O redirecionamento será feito pelo useEffect acima
-    } catch (err: any) {
-      console.error("Erro no login:", err);
-      if (err.message?.includes('Invalid login credentials')) {
-        setError('E-mail ou senha inválidos.');
-      } else {
-        setError('Erro ao tentar entrar. Verifique sua conexão.');
-      }
-      setIsLoading(false);
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      await loginWithGoogle();
-    } catch (err: any) {
-      setError('Erro ao tentar login com o Google.');
-      setIsLoading(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -61,89 +31,93 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-3xl shadow-xl border border-gray-100">
-        <div className="text-center">
-          <h1 className="text-3xl font-black text-gray-900">Entrar</h1>
-          <p className="text-gray-500 mt-2">Acesse sua conta para gerenciar eventos.</p>
-        </div>
-
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">E-mail</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-              placeholder="seu@email.com"
-            />
-          </div>
-
-          <div className="relative">
-            <label className="block text-sm font-bold text-gray-700 mb-1">Senha</label>
-            <input
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-              placeholder="Sua senha"
-            />
-            <button 
-              type="button" 
-              onClick={() => setShowPassword(!showPassword)} 
-              className="absolute right-3 top-9 text-gray-400 hover:text-gray-600"
-            >
-              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-            </button>
-          </div>
-
-          <div className="text-right">
-            <Link to="/forgot-password" title="Recuperar Senha" className="text-sm font-bold text-indigo-600 hover:underline">
-              Esqueci minha senha
-            </Link>
-          </div>
-
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl text-center font-medium">
-              {error}
-            </div>
-          )}
-
-          <button 
-            type="submit" 
-            disabled={isLoading} 
-            className="w-full py-4 bg-indigo-600 text-white font-black rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 disabled:bg-indigo-300 flex items-center justify-center gap-2"
-          >
-            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Entrar'}
-          </button>
-        </form>
-
-        <div className="relative flex items-center justify-center my-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-100"></div>
-          </div>
-          <div className="relative px-4 bg-white text-xs font-black text-gray-400 uppercase">ou</div>
-        </div>
-
-        <button 
-          onClick={handleGoogleLogin} 
-          disabled={isLoading} 
-          className="w-full flex items-center justify-center gap-3 px-4 py-4 font-bold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all"
-        >
-          <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
-          Entrar com Google
-        </button>
-
-        <div className="text-center text-sm text-gray-500 mt-8">
-          Ainda não tem conta?{' '}
-          <Link to="/register" className="font-black text-indigo-600 hover:underline">
-            Criar primeiro acesso
+    <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4 font-sans">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-md p-8 space-y-6 bg-white rounded-3xl shadow-xl border border-gray-100"
+      >
+        <div className="text-center mb-8">
+          <Link to="/" className="inline-flex items-center gap-2 mb-6 text-indigo-600 font-bold hover:text-indigo-700 transition-colors">
+            <ArrowLeft className="w-4 h-4" />
+            Voltar ao Início
           </Link>
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight">
+            SIGEA<span className="text-indigo-600">.</span>
+          </h1>
+          <p className="text-gray-500 mt-2 font-medium">Acesse sua conta para gerenciar eventos e certificados.</p>
         </div>
-      </div>
+
+        <Auth
+          supabaseClient={supabase}
+          providers={['google']}
+          appearance={{
+            theme: ThemeSupa,
+            variables: {
+              default: {
+                colors: {
+                  brand: '#4f46e5',
+                  brandAccent: '#4338ca',
+                  inputBackground: '#f9fafb',
+                  inputText: '#111827',
+                  inputBorder: '#e5e7eb',
+                  inputLabelText: '#374151',
+                },
+                radii: {
+                  borderRadiusButton: '12px',
+                  buttonPadding: '12px',
+                  inputPadding: '12px',
+                },
+                fontSizes: {
+                  baseBodySize: '14px',
+                  baseInputSize: '14px',
+                  baseLabelSize: '14px',
+                  baseButtonSize: '14px',
+                }
+              }
+            },
+            className: {
+              container: 'space-y-4',
+              button: 'font-bold shadow-sm transition-all active:scale-[0.98]',
+              input: 'focus:ring-2 focus:ring-indigo-500 outline-none transition-all',
+              label: 'font-semibold mb-1 block',
+            }
+          }}
+          localization={{
+            variables: {
+              sign_in: {
+                email_label: 'Endereço de e-mail',
+                password_label: 'Sua senha',
+                button_label: 'Entrar',
+                loading_button_label: 'Entrando...',
+                social_provider_text: 'Entrar com {{provider}}',
+                link_text: 'Já tem uma conta? Entre agora',
+              },
+              sign_up: {
+                email_label: 'Endereço de e-mail',
+                password_label: 'Crie uma senha',
+                button_label: 'Criar conta',
+                loading_button_label: 'Criando conta...',
+                social_provider_text: 'Cadastrar com {{provider}}',
+                link_text: 'Não tem uma conta? Cadastre-se',
+              },
+              forgotten_password: {
+                email_label: 'Endereço de e-mail',
+                button_label: 'Enviar instruções',
+                loading_button_label: 'Enviando...',
+                link_text: 'Esqueceu sua senha?',
+              },
+            }
+          }}
+          theme="light"
+        />
+
+        <div className="text-center pt-4 border-t border-gray-100">
+          <p className="text-xs text-gray-400 font-medium">
+            Ao entrar, você concorda com nossos <Link to="/sistema/termos" className="text-indigo-600 hover:underline">Termos de Uso</Link>.
+          </p>
+        </div>
+      </motion.div>
     </div>
   );
 }
