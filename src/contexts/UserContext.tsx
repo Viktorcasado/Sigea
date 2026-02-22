@@ -51,7 +51,6 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
           avatar_url: profile.avatar_url || ''
         } as User);
       } else {
-        // Fallback se o perfil não existir ainda
         setUser({
           id: supabaseUser.id,
           nome: supabaseUser.user_metadata?.full_name || 'Usuário',
@@ -70,36 +69,29 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   useEffect(() => {
     let mounted = true;
 
-    const initialize = async () => {
-      setLoading(true);
-      try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
-        if (!mounted) return;
+    const checkSession = async () => {
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      if (!mounted) return;
 
-        if (initialSession) {
-          setSession(initialSession);
-          await fetchProfile(initialSession.user);
-        }
-      } catch (err) {
-        console.error("[UserContext] Erro na inicialização:", err);
-      } finally {
-        if (mounted) setLoading(false);
+      if (initialSession) {
+        setSession(initialSession);
+        await fetchProfile(initialSession.user);
       }
+      setLoading(false);
     };
 
-    initialize();
+    checkSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       if (!mounted) return;
       
-      if (event === 'SIGNED_OUT') {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        setSession(currentSession);
+        if (currentSession) await fetchProfile(currentSession.user);
+        setLoading(false);
+      } else if (event === 'SIGNED_OUT') {
         setSession(null);
         setUser(null);
-        setLoading(false);
-      } else if (currentSession) {
-        setSession(currentSession);
-        setLoading(true); // Volta a carregar enquanto busca o perfil
-        await fetchProfile(currentSession.user);
         setLoading(false);
       }
     });
@@ -132,31 +124,20 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   };
 
   const logout = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (err) {
-      console.error("[UserContext] Erro no logout:", err);
-    }
+    await supabase.auth.signOut();
   };
 
   const updateProfile = async (updates: Partial<User>) => {
     if (!user) return;
-    
-    const payload: any = {};
-    if (updates.nome !== undefined) payload.full_name = updates.nome;
-    if (updates.campus !== undefined) payload.campus = updates.campus;
-    if (updates.matricula !== undefined) payload.registration_number = updates.matricula;
-    if (updates.avatar_url !== undefined) payload.avatar_url = updates.avatar_url;
-    if (updates.perfil !== undefined) payload.user_type = updates.perfil;
-    if (updates.is_organizer !== undefined) payload.is_organizer = updates.is_organizer;
-
-    const { error } = await supabase
-      .from('profiles')
-      .update(payload)
-      .eq('id', user.id);
-
+    const { error } = await supabase.from('profiles').update({
+      full_name: updates.nome,
+      campus: updates.campus,
+      registration_number: updates.matricula,
+      avatar_url: updates.avatar_url,
+      user_type: updates.perfil,
+      is_organizer: updates.is_organizer
+    }).eq('id', user.id);
     if (error) throw error;
-    
     setUser(prev => prev ? { ...prev, ...updates } : null);
   };
 
