@@ -51,6 +51,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
           avatar_url: profile.avatar_url || ''
         } as User);
       } else {
+        // Fallback se o perfil não existir ainda
         setUser({
           id: supabaseUser.id,
           nome: supabaseUser.user_metadata?.full_name || 'Usuário',
@@ -70,6 +71,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
     let mounted = true;
 
     const initialize = async () => {
+      setLoading(true);
       try {
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         if (!mounted) return;
@@ -90,13 +92,16 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       if (!mounted) return;
       
-      setSession(currentSession);
-      if (currentSession) {
-        await fetchProfile(currentSession.user);
-      } else {
+      if (event === 'SIGNED_OUT') {
+        setSession(null);
         setUser(null);
+        setLoading(false);
+      } else if (currentSession) {
+        setSession(currentSession);
+        setLoading(true); // Volta a carregar enquanto busca o perfil
+        await fetchProfile(currentSession.user);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => {
@@ -127,15 +132,10 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   };
 
   const logout = async () => {
-    setLoading(true);
     try {
       await supabase.auth.signOut();
-      setUser(null);
-      setSession(null);
     } catch (err) {
       console.error("[UserContext] Erro no logout:", err);
-    } finally {
-      setLoading(false);
     }
   };
 

@@ -10,17 +10,22 @@ import { Loader2, ArrowLeft } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export default function LoginPage() {
-  const { session, loading } = useUser();
+  const { user, loading } = useUser();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Redireciona se já estiver logado
+  // Redireciona apenas quando o USUÁRIO (perfil) estiver carregado
   useEffect(() => {
-    if (!loading && session) {
+    if (!loading && user) {
       const from = (location.state as any)?.from?.pathname || "/";
-      navigate(from, { replace: true });
+      // Evita redirecionar para o próprio login
+      if (from === "/login") {
+        navigate("/", { replace: true });
+      } else {
+        navigate(from, { replace: true });
+      }
     }
-  }, [session, loading, navigate, location]);
+  }, [user, loading, navigate, location]);
 
   if (loading) {
     return (
