@@ -9,10 +9,16 @@ export default defineConfig(() => {
       react(), 
       tailwindcss()
     ],
+    base: '/',
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
+    },
+    build: {
+      outDir: 'dist',
+      sourcemap: false,
+      minify: 'esbuild',
     },
     server: {
       hmr: process.env.DISABLE_HMR !== 'true',

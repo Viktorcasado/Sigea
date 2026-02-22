@@ -31,7 +31,6 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   const initialized = useRef(false);
 
   const fetchProfile = useCallback(async (supabaseUser: SupabaseUser) => {
-    // Primeiro, define um usuário básico com o que já temos na sessão (rápido)
     const basicUser: User = {
       id: supabaseUser.id,
       nome: supabaseUser.user_metadata?.full_name || 'Usuário',
@@ -43,19 +42,16 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
     };
     
     setUser(basicUser);
-    setLoading(false); // Libera a UI imediatamente
+    setLoading(false);
 
     try {
-      // Busca os detalhes completos em segundo plano
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', supabaseUser.id)
         .maybeSingle();
       
-      if (error) throw error;
-
-      if (profile) {
+      if (!error && profile) {
         setUser({
           id: profile.id,
           nome: profile.full_name || basicUser.nome,
@@ -70,7 +66,9 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
         });
       }
     } catch (err) {
-      console.error("[UserContext] Erro ao buscar perfil completo:", err);
+      console.error("[UserContext] Erro ao buscar perfil:", err);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -84,11 +82,10 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
         setSession(initialSession);
         if (initialSession) {
           await fetchProfile(initialSession.user);
-        } else {
-          setLoading(false);
         }
       } catch (err) {
         console.error("[UserContext] Erro na inicialização:", err);
+      } finally {
         setLoading(false);
       }
     };
