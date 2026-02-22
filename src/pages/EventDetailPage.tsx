@@ -102,7 +102,13 @@ export default function EventDetailPage() {
   };
 
   const handleSubscription = async () => {
-    if (!user || !event) return;
+    if (!user) {
+      showToast('Você precisa estar logado para se inscrever.', 'error');
+      navigate('/login');
+      return;
+    }
+    
+    if (!event) return;
     setSubmitting(true);
 
     const now = new Date();

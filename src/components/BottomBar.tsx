@@ -1,20 +1,24 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Compass, Award, User } from 'lucide-react';
+import { Home, Compass, Award, User, LogIn } from 'lucide-react';
 import { usePlatform } from '@/src/hooks/usePlatform';
+import { useUser } from '@/src/contexts/UserContext';
 
 export default function BottomBar() {
   const { isIos } = usePlatform();
+  const { user } = useUser();
   
   const navItems = [
     { path: '/', label: 'Início', icon: Home },
     { path: '/explorar', label: 'Explorar', icon: Compass },
-    { path: '/certificados', label: 'Certificados', icon: Award },
-    { path: '/perfil', label: 'Perfil', icon: User },
+    { path: '/certificados', label: 'Certificados', icon: Award, protected: true },
+    { path: user ? '/perfil' : '/login', label: user ? 'Perfil' : 'Entrar', icon: user ? User : LogIn },
   ];
+
+  const filteredItems = navItems.filter(item => !item.protected || user);
 
   return (
     <nav className={`fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t border-gray-100 flex items-center justify-around z-50 ${isIos ? 'pb-6 h-22' : 'h-16'}`}>
-      {navItems.map(({ path, label, icon: Icon }) => (
+      {filteredItems.map(({ path, label, icon: Icon }) => (
         <NavLink
           key={path}
           to={path}
