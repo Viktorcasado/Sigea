@@ -19,7 +19,6 @@ export default function HomePage() {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        setError(null);
         const { data, error: supabaseError } = await supabase
           .from('events')
           .select('*')
@@ -42,9 +41,8 @@ export default function HomePage() {
             carga_horaria: e.workload || 0
           })));
         }
-      } catch (err: any) {
-        console.error("Erro ao carregar eventos:", err);
-        setError("Não foi possível carregar os eventos. Verifique sua conexão.");
+      } catch (err) {
+        setError("Não foi possível carregar os eventos.");
       } finally {
         setLoading(false);
       }
@@ -74,13 +72,12 @@ export default function HomePage() {
         <h2 className="text-xl font-bold text-gray-800 mb-4">Próximos eventos</h2>
         {loading ? (
           <div className="flex gap-4 overflow-hidden">
-            {[1, 2, 3].map(i => <div key={i} className="w-64 h-40 bg-gray-100 animate-pulse rounded-xl flex-shrink-0" />)}
+            {[1, 2, 3].map(i => <div key={i} className="w-64 h-40 bg-gray-100 rounded-xl flex-shrink-0" />)}
           </div>
         ) : error ? (
           <div className="bg-red-50 p-6 rounded-2xl border border-red-100 text-center">
             <AlertCircle className="w-10 h-10 text-red-400 mx-auto mb-2" />
             <p className="text-red-700 font-medium">{error}</p>
-            <button onClick={() => window.location.reload()} className="mt-3 text-sm font-bold text-red-600 underline">Tentar novamente</button>
           </div>
         ) : events.length > 0 ? (
           <div className="flex overflow-x-auto pb-4 -mx-4 px-4 no-scrollbar">
@@ -92,9 +89,6 @@ export default function HomePage() {
           <div className="bg-white p-8 rounded-2xl border border-dashed border-gray-200 text-center">
             <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500 font-medium">Nenhum evento disponível no momento.</p>
-            <Link to="/explorar" className="text-indigo-600 text-sm font-bold mt-2 inline-block hover:underline">
-              Explorar todos os eventos
-            </Link>
           </div>
         )}
       </section>

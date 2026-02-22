@@ -14,7 +14,6 @@ const ProtectedRoute = () => {
     );
   }
 
-  // Usamos session em vez de user para evitar loops enquanto o perfil carrega
   if (!session) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
