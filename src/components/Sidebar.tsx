@@ -22,7 +22,7 @@ export default function Sidebar() {
       <div className="mb-10 px-2">
         <Link to="/" className="flex items-center gap-3">
           <img 
-            src="/public/assets/logo-light.jpg" 
+            src="/assets/logo-light.jpg" 
             alt="SIGEA" 
             className="w-10 h-10 rounded-xl object-contain"
             loading="eager"

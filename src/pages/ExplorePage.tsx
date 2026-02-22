@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import { Search, SlidersHorizontal, Star, Loader2 } from 'lucide-react';
+import { Search, SlidersHorizontal, Star, Loader2, Calendar } from 'lucide-react';
 import { supabase } from '@/src/integrations/supabase/client';
 import { Event } from '@/src/types';
 import EventCard from '@/src/components/EventCard';
@@ -17,27 +17,35 @@ export default function ExplorePage() {
   useEffect(() => {
     const fetchEvents = async () => {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from('events')
-        .select('*')
-        .order('date', { ascending: true });
+      try {
+        const { data, error } = await supabase
+          .from('events')
+          .select('*')
+          .order('date', { ascending: true });
 
-      if (!error && data) {
-        const formattedEvents: Event[] = data.map(e => ({
-          id: e.id,
-          titulo: e.title,
-          descricao: e.description || '',
-          dataInicio: new Date(e.date),
-          local: e.location || '',
-          campus: e.campus || '',
-          instituicao: 'IFAL',
-          modalidade: 'Presencial',
-          status: 'publicado',
-          vagas: e.workload || 0
-        }));
-        setEvents(formattedEvents);
+        if (error) throw error;
+
+        if (data) {
+          const formattedEvents: Event[] = data.map(e => ({
+            id: e.id,
+            titulo: e.title,
+            descricao: e.description || '',
+            dataInicio: new Date(e.date),
+            local: e.location || '',
+            campus: e.campus || '',
+            instituicao: 'IFAL',
+            modalidade: 'Presencial',
+            status: 'publicado',
+            vagas: e.workload || 0,
+            carga_horaria: e.workload || 0
+          }));
+          setEvents(formattedEvents);
+        }
+      } catch (err) {
+        console.error("Erro ao buscar eventos:", err);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     fetchEvents();
@@ -148,7 +156,7 @@ export default function ExplorePage() {
             className="text-center py-20 bg-white rounded-3xl border border-gray-100"
           >
             <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Search className="w-10 h-10 text-gray-300" />
+              <Calendar className="w-10 h-10 text-gray-300" />
             </div>
             <h3 className="text-xl font-bold text-gray-700">Nenhum evento encontrado</h3>
             <p className="text-gray-500 mt-2 max-w-xs mx-auto">Tente ajustar sua busca ou remover os filtros aplicados.</p>

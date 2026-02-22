@@ -48,12 +48,10 @@ export default function InstitutionPage() {
       const isOrganizer = perfil === 'servidor' || perfil === 'gestor';
 
       await updateProfile({ 
-        instituicao,
         campus,
         perfil,
         matricula,
-        is_organizer: isOrganizer,
-        status: isOrganizer ? 'gestor' : 'ativo_vinculado'
+        is_organizer: isOrganizer
       });
 
       addNotification({
@@ -167,7 +165,7 @@ export default function InstitutionPage() {
             <button 
               type="button" 
               onClick={() => navigate('/perfil')}
-              className="flex-1 py-4 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-all"
+              className="flex-1 py-4 bg-gray-100 text-gray-700 font-bold rounded-xl"
             >
               Cancelar
             </button>
