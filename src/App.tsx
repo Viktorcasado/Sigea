@@ -27,14 +27,12 @@ import GestorEventosPage from './pages/gestor/GestorEventosPage';
 import GestorVinculosPage from './pages/gestor/GestorVinculosPage';
 import GestorRelatoriosPage from './pages/gestor/GestorRelatoriosPage';
 import GestorAuditoriaPage from './pages/gestor/GestorAuditoriaPage';
-import AcessoRestritoPage from './pages/gestor/AcessoRestritoPage';
 import GestorProtectedRoute from './components/GestorProtectedRoute';
 import PoliciesPage from './pages/system/PoliciesPage';
 import TermsPage from './pages/system/TermsPage';
 import AboutPage from './pages/system/AboutPage';
 import NotificationsPage from './pages/NotificationsPage';
 import CreateEventPage from './pages/CreateEventPage';
-import RestrictedAccessPage from './pages/RestrictedAccessPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import SchedulePage from './pages/event/SchedulePage';
 import ManageActivitiesPage from './pages/event/ManageActivitiesPage';
@@ -75,7 +73,7 @@ function AppRoutes() {
         <Route path="evento/:id" element={<EventDetailPage />} />
         
         {/* Rotas que exigem login dentro do Layout principal */}
-        <Route element={<ProtectedRoute allowedProfiles={['aluno', 'servidor', 'gestor', 'admin', 'comunidade_externa']} />}>
+        <Route element={<ProtectedRoute />}>
           <Route path="certificados" element={<CertificatesPage />} />
           <Route path="perfil" element={<ProfilePage />} />
           <Route path="notificacoes" element={<NotificationsPage />} />
@@ -83,7 +81,7 @@ function AppRoutes() {
       </Route>
 
       {/* Rotas Protegidas (Fora do Layout principal) */}
-      <Route element={<ProtectedRoute allowedProfiles={['aluno', 'servidor', 'gestor', 'admin', 'comunidade_externa']} />}>
+      <Route element={<ProtectedRoute />}>
         <Route path="/perfil/editar" element={<EditProfilePage />} />
         <Route path="/perfil/instituicao-campus" element={<InstitutionPage />} />
         <Route path="/perfil/seguranca" element={<SecurityPage />} />
@@ -110,17 +108,13 @@ function AppRoutes() {
           </Route>
         </Route>
 
-        <Route element={<ProtectedRoute allowedProfiles={['servidor', 'gestor', 'admin', 'aluno']} />}>
-          <Route path="/evento/criar" element={<div className='bg-gray-50 min-h-screen font-sans'><CreateEventPage /></div>} />
-          <Route path="/evento/:id/cronograma" element={<div className='bg-gray-50 min-h-screen font-sans'><SchedulePage /></div>} />
-          <Route path="/evento/:id/atividades" element={<div className='bg-gray-50 min-h-screen font-sans'><ManageActivitiesPage /></div>} />
-          <Route path="/evento/:id/atividades/criar" element={<div className='bg-gray-50 min-h-screen font-sans'><ActivityFormPage /></div>} />
-          <Route path="/evento/:id/atividades/:activityId/editar" element={<div className='bg-gray-50 min-h-screen font-sans'><ActivityFormPage /></div>} />
-        </Route>
+        <Route path="/evento/criar" element={<div className='bg-gray-50 min-h-screen font-sans'><CreateEventPage /></div>} />
+        <Route path="/evento/:id/cronograma" element={<div className='bg-gray-50 min-h-screen font-sans'><SchedulePage /></div>} />
+        <Route path="/evento/:id/atividades" element={<div className='bg-gray-50 min-h-screen font-sans'><ManageActivitiesPage /></div>} />
+        <Route path="/evento/:id/atividades/criar" element={<div className='bg-gray-50 min-h-screen font-sans'><ActivityFormPage /></div>} />
+        <Route path="/evento/:id/atividades/:activityId/editar" element={<div className='bg-gray-50 min-h-screen font-sans'><ActivityFormPage /></div>} />
       </Route>
 
-      <Route path="/gestor/acesso-restrito" element={<AcessoRestritoPage />} />
-      <Route path="/acesso-restrito" element={<RestrictedAccessPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

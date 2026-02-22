@@ -1,11 +1,7 @@
 import { useUser } from '@/src/contexts/UserContext';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 
-interface ProtectedRouteProps {
-  allowedProfiles: Array<'aluno' | 'servidor' | 'gestor' | 'admin' | 'comunidade_externa'>;
-}
-
-const ProtectedRoute = ({ allowedProfiles }: ProtectedRouteProps) => {
+const ProtectedRoute = () => {
   const { user, loading } = useUser();
   const location = useLocation();
 
@@ -22,11 +18,7 @@ const ProtectedRoute = ({ allowedProfiles }: ProtectedRouteProps) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Se estiver logado mas o perfil não estiver na lista
-  if (!allowedProfiles.includes(user.perfil)) {
-    return <Navigate to="/acesso-restrito" replace />;
-  }
-
+  // Acesso liberado para todos os usuários autenticados
   return <Outlet />;
 };
 

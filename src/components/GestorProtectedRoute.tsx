@@ -17,13 +17,7 @@ const GestorProtectedRoute = () => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Permitimos gestores, servidores, admins e alunos (para testes/organização)
-  const allowedProfiles = ['gestor', 'servidor', 'aluno', 'admin'];
-
-  if (!allowedProfiles.includes(user.perfil)) {
-    return <Navigate to="/gestor/acesso-restrito" replace />;
-  }
-
+  // Acesso liberado para todos os usuários autenticados na área de gestão
   return <Outlet />;
 };
 
