@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '@/src/contexts/UserContext';
 import { useToast } from '@/src/contexts/ToastContext';
@@ -15,8 +15,11 @@ export default function UserInscriptionsPage() {
   const [inscriptions, setInscriptions] = useState<Inscricao[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchInscriptions = async () => {
-    if (!user) return;
+  const fetchInscriptions = useCallback(async () => {
+    if (!user) {
+      if (!userLoading) setLoading(false);
+      return;
+    }
     
     setLoading(true);
     try {
@@ -55,17 +58,11 @@ export default function UserInscriptionsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, userLoading]);
 
   useEffect(() => {
-    if (!userLoading) {
-      if (user) {
-        fetchInscriptions();
-      } else {
-        setLoading(false);
-      }
-    }
-  }, [user, userLoading]);
+    fetchInscriptions();
+  }, [fetchInscriptions]);
 
   const handleCancel = async (eventId: string) => {
     if (!user || !window.confirm('Deseja realmente cancelar esta inscrição?')) return;

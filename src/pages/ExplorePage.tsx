@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Search, SlidersHorizontal, Star, Loader2, Calendar, AlertCircle } from 'lucide-react';
 import { supabase } from '@/src/integrations/supabase/client';
 import { Event } from '@/src/types';
@@ -18,7 +18,7 @@ export default function ExplorePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     
@@ -51,11 +51,11 @@ export default function ExplorePage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchEvents();
-  }, []);
+  }, [fetchEvents]);
 
   const toggleFavorite = (eventId: string) => {
     setFavorites(prev => {

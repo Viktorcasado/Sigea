@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '@/src/contexts/UserContext';
 import { PresencaRepository } from '@/src/repositories/PresencaRepository';

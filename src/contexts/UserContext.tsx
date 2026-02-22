@@ -29,8 +29,17 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const initialized = useRef(false);
+  const lastFetchedUserId = useRef<string | null>(null);
 
   const fetchProfile = useCallback(async (supabaseUser: SupabaseUser) => {
+    // Evita buscas duplicadas para o mesmo usuário se já estiver carregando ou carregado
+    if (lastFetchedUserId.current === supabaseUser.id && user) {
+      setLoading(false);
+      return;
+    }
+    
+    lastFetchedUserId.current = supabaseUser.id;
+    
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
@@ -38,6 +47,8 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
         .eq('id', supabaseUser.id)
         .maybeSingle();
       
+      if (error) throw error;
+
       const basicUser: User = {
         id: supabaseUser.id,
         nome: profile?.full_name || supabaseUser.user_metadata?.full_name || 'Usuário',
@@ -57,7 +68,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (initialized.current) return;
@@ -86,6 +97,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
         await fetchProfile(currentSession.user);
       } else {
         setUser(null);
+        lastFetchedUserId.current = null;
         setLoading(false);
       }
     });
@@ -121,6 +133,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
     } finally {
       setUser(null);
       setSession(null);
+      lastFetchedUserId.current = null;
       setLoading(false);
     }
   };
