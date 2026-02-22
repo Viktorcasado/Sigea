@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { useUser } from '@/src/contexts/UserContext';
 import { Event } from '@/src/types';
 import { supabase } from '@/src/integrations/supabase/client';
-import { ArrowLeft, PlusCircle, Calendar, MapPin, Settings } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Calendar, MapPin, Settings, Award } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export default function MyEventsPage() {
@@ -33,9 +33,9 @@ export default function MyEventsPage() {
           dataInicio: new Date(e.date),
           local: e.location || '',
           campus: e.campus || '',
-          instituicao: 'IFAL', // Valor padrão ou vindo do banco se houver
-          modalidade: 'Presencial', // Valor padrão
-          status: 'publicado', // Valor padrão
+          instituicao: 'IFAL',
+          modalidade: 'Presencial',
+          status: 'publicado',
           vagas: 0
         }));
         setEvents(formattedEvents);
@@ -92,9 +92,18 @@ export default function MyEventsPage() {
                   <span className="text-xs font-black uppercase px-2 py-1 rounded-md bg-blue-50 text-blue-600">
                     {event.status}
                   </span>
-                  <Link to={`/evento/${event.id}/cronograma`} className="text-gray-400 hover:text-indigo-600">
-                    <Settings className="w-5 h-5" />
-                  </Link>
+                  <div className="flex gap-2">
+                    <Link 
+                      to={`/gestor/eventos/${event.id}/certificado-template`} 
+                      className="text-gray-400 hover:text-indigo-600"
+                      title="Configurar Certificado"
+                    >
+                      <Award className="w-5 h-5" />
+                    </Link>
+                    <Link to={`/evento/${event.id}/cronograma`} className="text-gray-400 hover:text-indigo-600">
+                      <Settings className="w-5 h-5" />
+                    </Link>
+                  </div>
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">{event.titulo}</h3>
                 <div className="space-y-2 text-sm text-gray-500">

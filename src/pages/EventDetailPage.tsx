@@ -7,7 +7,7 @@ import { useUser } from '@/src/contexts/UserContext';
 import { useToast } from '@/src/contexts/ToastContext';
 import { supabase } from '@/src/integrations/supabase/client';
 import { Event } from '@/src/types';
-import { ArrowLeft, Share2, Calendar, MapPin, Award, CheckCircle, Clock } from 'lucide-react';
+import { ArrowLeft, Share2, Calendar, MapPin, Award, CheckCircle, Clock, Settings } from 'lucide-react';
 import { motion } from 'motion/react';
 import { handleShare, formatEventShare } from '@/src/utils/share';
 
@@ -47,7 +47,8 @@ export default function EventDetailPage() {
           instituicao: 'IFAL',
           modalidade: 'Presencial',
           status: 'publicado',
-          vagas: eventData.workload
+          vagas: eventData.workload,
+          organizer_id: eventData.organizer_id
         });
 
         if (user) {
@@ -168,6 +169,7 @@ export default function EventDetailPage() {
   if (loading) return <div className="flex justify-center py-20"><div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div></div>;
   if (!event) return <div className="text-center py-20"><h2 className="text-2xl font-bold">Evento não encontrado</h2></div>;
 
+  const isOrganizer = user?.id === event.organizer_id;
   const minutesLeft = getMinutesRemaining();
 
   return (
@@ -177,13 +179,25 @@ export default function EventDetailPage() {
           <ArrowLeft className="w-5 h-5 mr-2" />
           Voltar
         </button>
-        <button 
-          onClick={onShare}
-          className="p-2.5 bg-white border border-gray-200 rounded-xl text-gray-600 hover:text-indigo-600 hover:border-indigo-100 transition-all shadow-sm"
-          title="Compartilhar Evento"
-        >
-          <Share2 className="w-5 h-5" />
-        </button>
+        <div className="flex gap-2">
+          {isOrganizer && (
+            <Link 
+              to={`/gestor/eventos/${event.id}/certificado-template`}
+              className="p-2.5 bg-white border border-gray-200 rounded-xl text-indigo-600 hover:bg-indigo-50 transition-all shadow-sm flex items-center gap-2"
+              title="Configurar Certificado"
+            >
+              <Award className="w-5 h-5" />
+              <span className="text-xs font-bold hidden sm:inline">Certificado</span>
+            </Link>
+          )}
+          <button 
+            onClick={onShare}
+            className="p-2.5 bg-white border border-gray-200 rounded-xl text-gray-600 hover:text-indigo-600 hover:border-indigo-100 transition-all shadow-sm"
+            title="Compartilhar Evento"
+          >
+            <Share2 className="w-5 h-5" />
+          </button>
+        </div>
       </header>
 
       <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">

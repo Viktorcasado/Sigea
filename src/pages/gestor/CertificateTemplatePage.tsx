@@ -33,6 +33,7 @@ export default function CertificateTemplatePage() {
       const type = fileExt === 'pdf' ? 'pdf' : 'image';
       const filePath = `templates/${eventId}/${Date.now()}.${fileExt}`;
 
+      // Upload para o bucket 'certificate-templates'
       const { error: uploadError } = await supabase.storage
         .from('certificate-templates')
         .upload(filePath, file, { upsert: true });
