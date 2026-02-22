@@ -28,7 +28,6 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const isInitialMount = useRef(true);
 
   const fetchProfile = useCallback(async (supabaseUser: SupabaseUser) => {
     try {
@@ -38,22 +37,18 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
         .eq('id', supabaseUser.id)
         .maybeSingle();
       
-      if (profile && !error) {
-        return {
-          id: profile.id,
-          nome: profile.full_name || supabaseUser.user_metadata?.full_name || 'Usuário',
-          username: profile.full_name?.split(' ')[0].toLowerCase() || supabaseUser.email?.split('@')[0] || 'user',
-          email: supabaseUser.email || '',
-          perfil: profile.user_type || 'comunidade_externa',
-          status: deriveStatus(profile.user_type, profile.is_organizer || false),
-          is_organizer: profile.is_organizer || false,
-          campus: profile.campus || '',
-          matricula: profile.registration_number || '',
-          avatar_url: profile.avatar_url || ''
-        } as User;
-      }
-      
-      return {
+      const userData: User = profile && !error ? {
+        id: profile.id,
+        nome: profile.full_name || supabaseUser.user_metadata?.full_name || 'Usuário',
+        username: profile.full_name?.split(' ')[0].toLowerCase() || supabaseUser.email?.split('@')[0] || 'user',
+        email: supabaseUser.email || '',
+        perfil: profile.user_type || 'comunidade_externa',
+        status: deriveStatus(profile.user_type, profile.is_organizer || false),
+        is_organizer: profile.is_organizer || false,
+        campus: profile.campus || '',
+        matricula: profile.registration_number || '',
+        avatar_url: profile.avatar_url || ''
+      } : {
         id: supabaseUser.id,
         nome: supabaseUser.user_metadata?.full_name || 'Usuário',
         email: supabaseUser.email || '',
@@ -61,7 +56,9 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
         status: 'ativo_comunidade',
         is_organizer: false,
         username: supabaseUser.email?.split('@')[0] || 'user'
-      } as User;
+      };
+
+      return userData;
     } catch (err) {
       console.error("[UserContext] Erro ao buscar perfil:", err);
       return null;
@@ -71,28 +68,19 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   useEffect(() => {
     let mounted = true;
 
-    const initializeAuth = async () => {
-      try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
-        
-        if (!mounted) return;
+    const initialize = async () => {
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      if (!mounted) return;
 
-        if (initialSession) {
-          setSession(initialSession);
-          const profile = await fetchProfile(initialSession.user);
-          if (mounted) setUser(profile);
-        }
-      } catch (err) {
-        console.error("[UserContext] Erro na inicialização:", err);
-      } finally {
-        if (mounted) setLoading(false);
+      if (initialSession) {
+        setSession(initialSession);
+        const profile = await fetchProfile(initialSession.user);
+        if (mounted) setUser(profile);
       }
+      if (mounted) setLoading(false);
     };
 
-    if (isInitialMount.current) {
-      initializeAuth();
-      isInitialMount.current = false;
-    }
+    initialize();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       if (!mounted) return;
@@ -101,16 +89,14 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
         setSession(currentSession);
         if (currentSession) {
           const profile = await fetchProfile(currentSession.user);
-          if (mounted) {
-            setUser(profile);
-            setLoading(false);
-          }
+          if (mounted) setUser(profile);
         }
       } else if (event === 'SIGNED_OUT') {
         setSession(null);
         setUser(null);
-        setLoading(false);
       }
+      
+      if (mounted) setLoading(false);
     });
 
     return () => {
@@ -120,25 +106,37 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   }, [fetchProfile]);
 
   const login = async (email: string, password: string) => {
+    setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    if (error) {
+      setLoading(false);
+      throw error;
+    }
   };
 
   const signUp = async (email: string, password: string, metadata: any) => {
+    setLoading(true);
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: metadata }
     });
-    if (error) throw error;
+    if (error) {
+      setLoading(false);
+      throw error;
+    }
   };
 
   const loginWithGoogle = async () => {
+    setLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({ 
       provider: 'google',
       options: { redirectTo: `${window.location.origin}/auth/callback` }
     });
-    if (error) throw error;
+    if (error) {
+      setLoading(false);
+      throw error;
+    }
   };
 
   const logout = async () => {
@@ -148,22 +146,16 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
 
   const updateProfile = async (updates: Partial<User>) => {
     if (!user) return;
-    
-    const payload: any = {};
-    if (updates.nome !== undefined) payload.full_name = updates.nome;
-    if (updates.campus !== undefined) payload.campus = updates.campus;
-    if (updates.matricula !== undefined) payload.registration_number = updates.matricula;
-    if (updates.avatar_url !== undefined) payload.avatar_url = updates.avatar_url;
-    if (updates.perfil !== undefined) payload.user_type = updates.perfil;
-    if (updates.is_organizer !== undefined) payload.is_organizer = updates.is_organizer;
-
-    const { error } = await supabase
-      .from('profiles')
-      .update(payload)
-      .eq('id', user.id);
+    const { error } = await supabase.from('profiles').update({
+      full_name: updates.nome,
+      campus: updates.campus,
+      registration_number: updates.matricula,
+      avatar_url: updates.avatar_url,
+      user_type: updates.perfil,
+      is_organizer: updates.is_organizer
+    }).eq('id', user.id);
 
     if (error) throw error;
-    
     setUser(prev => prev ? { ...prev, ...updates } : null);
   };
 

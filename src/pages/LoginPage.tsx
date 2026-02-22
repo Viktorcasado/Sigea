@@ -1,46 +1,30 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useUser } from '@/src/contexts/UserContext';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Loader2, ArrowLeft, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export default function LoginPage() {
-  const { user, loading, login, loginWithGoogle } = useUser();
-  const navigate = useNavigate();
-  const location = useLocation();
-
+  const { login, loginWithGoogle, loading } = useUser();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Redirecionamento centralizado
-  useEffect(() => {
-    // Só redireciona se NÃO estiver carregando e o usuário existir
-    if (!loading && user) {
-      const from = (location.state as any)?.from?.pathname || "/";
-      // Se o destino for o próprio login, vai para a home
-      const destination = from === "/login" ? "/" : from;
-      navigate(destination, { replace: true });
-    }
-  }, [user, loading, navigate, location]);
+  const [isLocalLoading, setIsLocalLoading] = useState(false);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting) return;
-
     setError(null);
-    setIsSubmitting(true);
+    setIsLocalLoading(true);
 
     try {
       await login(email, password);
-      // O redirecionamento será feito pelo useEffect acima assim que o estado atualizar
+      // O redirecionamento é feito automaticamente pelo ProtectedRoute/PublicRoute no App.tsx
     } catch (err: any) {
-      setError('E-mail ou senha incorretos. Tente novamente.');
-      setIsSubmitting(false);
+      setError('E-mail ou senha incorretos.');
+      setIsLocalLoading(false);
     }
   };
 
@@ -53,14 +37,7 @@ export default function LoginPage() {
     }
   };
 
-  // Se estiver carregando o estado inicial da sessão, mostra o spinner global
-  if (loading && !isSubmitting) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
-      </div>
-    );
-  }
+  const isProcessing = loading || isLocalLoading;
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4 font-sans">
@@ -92,7 +69,7 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all"
                 placeholder="seu@email.com"
-                disabled={isSubmitting}
+                disabled={isProcessing}
               />
             </div>
           </div>
@@ -108,13 +85,13 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full pl-12 pr-12 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all"
                 placeholder="••••••••"
-                disabled={isSubmitting}
+                disabled={isProcessing}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                disabled={isSubmitting}
+                disabled={isProcessing}
               >
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
@@ -129,10 +106,10 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isProcessing}
             className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 disabled:bg-indigo-300 flex items-center justify-center gap-2"
           >
-            {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Entrar'}
+            {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Entrar'}
           </button>
         </form>
 
@@ -144,7 +121,7 @@ export default function LoginPage() {
 
         <button
           onClick={handleGoogleLogin}
-          disabled={isSubmitting}
+          disabled={isProcessing}
           className="w-full py-4 bg-white border-2 border-gray-100 text-gray-700 font-bold rounded-2xl hover:bg-gray-50 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
