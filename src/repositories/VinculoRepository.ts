@@ -1,19 +1,34 @@
-import { Vinculo, VinculoStatus } from '@/src/types';
-import { mockUsers } from '@/src/data/mock';
+"use client";
 
-const mockVinculosDB: Vinculo[] = [];
+import { supabase } from '@/src/integrations/supabase/client';
 
-export const VinculoRepositoryMock = {
-  async listByStatus(status: VinculoStatus): Promise<Vinculo[]> {
-    return mockVinculosDB.filter(v => v.status === status);
+export const VinculoRepository = {
+  async listPendentes() {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_type', 'servidor')
+      .eq('is_organizer', false);
+
+    if (error) throw error;
+    return data;
   },
 
-  async updateStatus(vinculoId: string, status: VinculoStatus): Promise<Vinculo | null> {
-    const index = mockVinculosDB.findIndex(v => v.id === vinculoId);
-    if (index > -1) {
-      mockVinculosDB[index].status = status;
-      return mockVinculosDB[index];
-    }
-    return null;
+  async aprovarVinculo(profileId: string): Promise<void> {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ is_organizer: true })
+      .eq('id', profileId);
+
+    if (error) throw error;
+  },
+
+  async rejeitarVinculo(profileId: string): Promise<void> {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ user_type: 'comunidade_externa' })
+      .eq('id', profileId);
+
+    if (error) throw error;
   }
 };

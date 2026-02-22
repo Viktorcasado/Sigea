@@ -1,43 +1,52 @@
-import { Presenca } from '@/src/types';
-import { ActivityRepository } from './ActivityRepository';
+"use client";
 
-const mockPresencasDB: Presenca[] = [];
+import { supabase } from '@/src/integrations/supabase/client';
 
-export const PresencaRepositoryMock = {
-  async listByAtividade(atividadeId: string): Promise<Presenca[]> {
-    return mockPresencasDB.filter(p => p.atividadeId === atividadeId);
+export const PresencaRepository = {
+  async listByAtividade(activityId: string) {
+    const { data, error } = await supabase
+      .from('activity_registrations')
+      .select('*, profiles(full_name)')
+      .eq('activity_id', activityId);
+
+    if (error) throw error;
+    return data;
   },
 
-  async setPresenca(data: { atividadeId: string; userId: string; presente: boolean; marcadoPor: string }[]): Promise<void> {
-    data.forEach(item => {
-      const index = mockPresencasDB.findIndex(p => p.atividadeId === item.atividadeId && p.userId === item.userId);
-      if (index > -1) {
-        mockPresencasDB[index].presente = item.presente;
-      } else {
-        mockPresencasDB.push({
-          id: `pre${Date.now()}${Math.random()}`,
-          ...item,
-          createdAt: new Date(),
-        });
-      }
-    });
+  async setPresenca(activityId: string, userId: string, attended: boolean): Promise<void> {
+    const { error } = await supabase
+      .from('activity_registrations')
+      .upsert({
+        activity_id: activityId,
+        user_id: userId,
+        attended: attended,
+      }, { onConflict: 'activity_id,user_id' });
+
+    if (error) throw error;
   },
 
-  async listByUser(userId: string): Promise<Presenca[]> {
-    return mockPresencasDB.filter(p => p.userId === userId);
+  async listByUser(userId: string) {
+    const { data, error } = await supabase
+      .from('activity_registrations')
+      .select('*, activities(*)')
+      .eq('user_id', userId)
+      .eq('attended', true);
+
+    if (error) throw error;
+    return data;
   },
 
-  async calcularCargaHoraria(eventoId: string, userId: string): Promise<number> {
-    const presencas = mockPresencasDB.filter(p => p.userId === userId && p.presente);
-    const atividadesDoEvento = await ActivityRepository.listByEvent(eventoId);
+  async calcularCargaHorariaTotal(userId: string): Promise<number> {
+    const { data, error } = await supabase
+      .from('activity_registrations')
+      .select('activities(hours)')
+      .eq('user_id', userId)
+      .eq('attended', true);
+
+    if (error) return 0;
     
-    let totalMinutos = 0;
-    presencas.forEach(presenca => {
-      const atividade = atividadesDoEvento.find(a => a.id === presenca.atividadeId);
-      if (atividade) {
-        totalMinutos += atividade.hours * 60; // Convertendo horas para minutos
-      }
-    });
-    return totalMinutos;
+    return data.reduce((acc, curr: any) => {
+      return acc + (curr.activities?.hours || 0);
+    }, 0);
   },
 };

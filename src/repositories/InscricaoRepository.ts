@@ -1,44 +1,92 @@
-import { Inscricao } from '@/src/types';
-import { mockUsers } from '@/src/data/mock';
+"use client";
 
-const mockInscricoesDB: Inscricao[] = [
-  { id: 'ins01', eventoId: 'evt02', userId: mockUsers[1].id, status: 'inscrito', createdAt: new Date() },
-];
+import { Inscricao, Event } from '@/src/types';
+import { supabase } from '@/src/integrations/supabase/client';
 
-export const InscricaoRepositoryMock = {
-  async getStatus(eventoId: string, userId: string): Promise<'inscrito' | 'cancelado' | null> {
-    const inscricao = mockInscricoesDB.find(i => i.eventoId === eventoId && i.userId === userId);
-    return inscricao ? inscricao.status : null;
+export const InscricaoRepository = {
+  async getStatus(eventId: string, userId: string): Promise<'inscrito' | 'cancelado' | null> {
+    const { data, error } = await supabase
+      .from('event_registrations')
+      .select('status')
+      .eq('event_id', eventId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) return null;
+    return data ? (data.status as any) : null;
   },
 
-  async listByEvento(eventoId: string): Promise<Inscricao[]> {
-    return mockInscricoesDB.filter(i => i.eventoId === eventoId && i.status === 'inscrito');
+  async listByEvento(eventId: string): Promise<Inscricao[]> {
+    const { data, error } = await supabase
+      .from('event_registrations')
+      .select('*, profiles(full_name, email)')
+      .eq('event_id', eventId);
+
+    if (error) throw error;
+    return data.map(reg => ({
+      id: reg.id,
+      eventoId: reg.event_id,
+      userId: reg.user_id,
+      status: reg.status,
+      createdAt: new Date(reg.registered_at),
+    }));
   },
 
   async listByUser(userId: string): Promise<Inscricao[]> {
-    return mockInscricoesDB.filter(i => i.userId === userId && i.status === 'inscrito');
+    const { data, error } = await supabase
+      .from('event_registrations')
+      .select('*, events(*)')
+      .eq('user_id', userId);
+
+    if (error) throw error;
+    return data.map(reg => ({
+      id: reg.id,
+      eventoId: reg.event_id,
+      userId: reg.user_id,
+      status: reg.status,
+      createdAt: new Date(reg.registered_at),
+      event: reg.events ? {
+        id: reg.events.id,
+        titulo: reg.events.title,
+        dataInicio: new Date(reg.events.date),
+        campus: reg.events.campus,
+        instituicao: 'IFAL',
+        status: 'publicado',
+        carga_horaria: reg.events.workload || 0
+      } as any : undefined
+    }));
   },
 
-  async createInscricao(eventoId: string, userId: string): Promise<Inscricao> {
-    const newInscricao: Inscricao = {
-      id: `ins${Date.now()}`,
-      eventoId,
-      userId,
-      status: 'inscrito',
-      createdAt: new Date(),
-    };
-    mockInscricoesDB.push(newInscricao);
-    return newInscricao;
+  async createInscricao(eventId: string, userId: string): Promise<void> {
+    const { error } = await supabase
+      .from('event_registrations')
+      .insert({
+        event_id: eventId,
+        user_id: userId,
+        status: 'confirmada',
+        registered_at: new Date().toISOString()
+      });
+
+    if (error) throw error;
   },
 
-  async cancelInscricao(eventoId: string, userId: string): Promise<void> {
-    const index = mockInscricoesDB.findIndex(i => i.eventoId === eventoId && i.userId === userId);
-    if (index > -1) {
-      mockInscricoesDB[index].status = 'cancelado';
-    }
+  async cancelInscricao(eventId: string, userId: string): Promise<void> {
+    const { error } = await supabase
+      .from('event_registrations')
+      .delete()
+      .eq('event_id', eventId)
+      .eq('user_id', userId);
+
+    if (error) throw error;
   },
 
-  async countByEvento(eventoId: string): Promise<number> {
-    return mockInscricoesDB.filter(i => i.eventoId === eventoId && i.status === 'inscrito').length;
+  async countByEvento(eventId: string): Promise<number> {
+    const { count, error } = await supabase
+      .from('event_registrations')
+      .select('*', { count: 'exact', head: true })
+      .eq('event_id', eventId);
+
+    if (error) return 0;
+    return count || 0;
   },
 };
