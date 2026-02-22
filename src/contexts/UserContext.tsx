@@ -31,19 +31,6 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   const initialized = useRef(false);
 
   const fetchProfile = useCallback(async (supabaseUser: SupabaseUser) => {
-    const basicUser: User = {
-      id: supabaseUser.id,
-      nome: supabaseUser.user_metadata?.full_name || 'Usuário',
-      email: supabaseUser.email || '',
-      perfil: 'comunidade_externa',
-      status: 'ativo_comunidade',
-      is_organizer: false,
-      username: supabaseUser.email?.split('@')[0] || 'user'
-    };
-    
-    setUser(basicUser);
-    setLoading(false);
-
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
@@ -51,20 +38,20 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
         .eq('id', supabaseUser.id)
         .maybeSingle();
       
-      if (!error && profile) {
-        setUser({
-          id: profile.id,
-          nome: profile.full_name || basicUser.nome,
-          username: profile.full_name?.split(' ')[0].toLowerCase() || basicUser.username,
-          email: supabaseUser.email || '',
-          perfil: profile.user_type || 'comunidade_externa',
-          status: deriveStatus(profile.user_type, profile.is_organizer || false),
-          is_organizer: profile.is_organizer || false,
-          campus: profile.campus || '',
-          matricula: profile.registration_number || '',
-          avatar_url: profile.avatar_url || ''
-        });
-      }
+      const basicUser: User = {
+        id: supabaseUser.id,
+        nome: profile?.full_name || supabaseUser.user_metadata?.full_name || 'Usuário',
+        email: supabaseUser.email || '',
+        avatar_url: profile?.avatar_url || supabaseUser.user_metadata?.avatar_url || '',
+        perfil: profile?.user_type || 'comunidade_externa',
+        status: deriveStatus(profile?.user_type, profile?.is_organizer || false),
+        is_organizer: profile?.is_organizer || false,
+        username: supabaseUser.email?.split('@')[0] || 'user',
+        campus: profile?.campus || '',
+        matricula: profile?.registration_number || ''
+      };
+
+      setUser(basicUser);
     } catch (err) {
       console.error("[UserContext] Erro ao buscar perfil:", err);
     } finally {
@@ -82,10 +69,11 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
         setSession(initialSession);
         if (initialSession) {
           await fetchProfile(initialSession.user);
+        } else {
+          setLoading(false);
         }
       } catch (err) {
         console.error("[UserContext] Erro na inicialização:", err);
-      } finally {
         setLoading(false);
       }
     };

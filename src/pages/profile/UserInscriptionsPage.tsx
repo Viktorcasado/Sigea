@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '@/src/contexts/UserContext';
 import { useToast } from '@/src/contexts/ToastContext';
@@ -10,51 +10,59 @@ import { ArrowLeft, Calendar, MapPin, XCircle, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export default function UserInscriptionsPage() {
-  const { user } = useUser();
+  const { user, loading: userLoading } = useUser();
   const { showToast } = useToast();
   const [inscriptions, setInscriptions] = useState<Inscricao[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchInscriptions = async () => {
-    if (!user) return;
-    setLoading(true);
-
-    const { data, error } = await supabase
-      .from('event_registrations')
-      .select(`
-        *,
-        events (*)
-      `)
-      .eq('user_id', user.id);
-
-    if (!error && data) {
-      const formatted: Inscricao[] = data.map(reg => ({
-        id: reg.id,
-        eventoId: reg.event_id,
-        userId: reg.user_id,
-        status: reg.status,
-        createdAt: new Date(reg.registered_at),
-        event: {
-          id: reg.events.id,
-          titulo: reg.events.title,
-          dataInicio: new Date(reg.events.date),
-          campus: reg.events.campus || '',
-          instituicao: 'IFAL',
-          local: reg.events.location || '',
-          descricao: reg.events.description || '',
-          modalidade: 'Presencial',
-          status: 'publicado',
-          carga_horaria: reg.events.workload || 0
-        }
-      }));
-      setInscriptions(formatted);
+  const fetchInscriptions = useCallback(async () => {
+    if (!user) {
+      if (!userLoading) setLoading(false);
+      return;
     }
-    setLoading(false);
-  };
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('event_registrations')
+        .select(`
+          *,
+          events (*)
+        `)
+        .eq('user_id', user.id);
+
+      if (!error && data) {
+        const formatted: Inscricao[] = data.map(reg => ({
+          id: reg.id,
+          eventoId: reg.event_id,
+          userId: reg.user_id,
+          status: reg.status,
+          createdAt: new Date(reg.registered_at),
+          event: {
+            id: reg.events.id,
+            titulo: reg.events.title,
+            dataInicio: new Date(reg.events.date),
+            campus: reg.events.campus || '',
+            instituicao: 'IFAL',
+            local: reg.events.location || '',
+            descricao: reg.events.description || '',
+            modalidade: 'Presencial',
+            status: 'publicado',
+            carga_horaria: reg.events.workload || 0
+          }
+        }));
+        setInscriptions(formatted);
+      }
+    } catch (err) {
+      console.error("Erro ao buscar inscrições:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user, userLoading]);
 
   useEffect(() => {
     fetchInscriptions();
-  }, [user]);
+  }, [fetchInscriptions]);
 
   const handleCancel = async (eventId: string) => {
     if (!user || !window.confirm('Deseja realmente cancelar esta inscrição?')) return;

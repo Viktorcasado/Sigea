@@ -1,34 +1,37 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '@/src/contexts/UserContext';
-import { Activity } from '@/src/types';
 import { PresencaRepository } from '@/src/repositories/PresencaRepository';
-import { ActivityRepository } from '@/src/repositories/ActivityRepository';
-import { ArrowLeft, CheckCircle, Clock, Calendar } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Clock, Calendar, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export default function UserPresencesPage() {
-  const { user } = useUser();
+  const { user, loading: userLoading } = useUser();
   const [presences, setPresences] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user) {
-      const loadData = async () => {
-        try {
-          const userPresences = await PresencaRepository.listByUser(user.id);
-          setPresences(userPresences);
-        } catch (error) {
-          console.error("Erro ao carregar presenças:", error);
-        } finally {
-          setLoading(false);
-        }
-      };
-      loadData();
+  const loadData = useCallback(async () => {
+    if (!user) {
+      if (!userLoading) setLoading(false);
+      return;
     }
-  }, [user]);
+
+    setLoading(true);
+    try {
+      const userPresences = await PresencaRepository.listByUser(user.id);
+      setPresences(userPresences);
+    } catch (error) {
+      console.error("Erro ao carregar presenças:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user, userLoading]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   return (
     <div className="max-w-2xl mx-auto py-8 px-4">
@@ -44,7 +47,7 @@ export default function UserPresencesPage() {
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+          <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
         </div>
       ) : presences.length === 0 ? (
         <motion.div 
