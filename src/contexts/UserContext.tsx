@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useState, useContext, ReactNode, FC, useEffect } from 'react';
+import { createContext, useState, useContext, ReactNode, FC, useEffect, useCallback } from 'react';
 import { User, UserStatus } from '@/src/types';
 import { supabase } from '@/src/integrations/supabase/client';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
@@ -18,18 +18,18 @@ interface UserContextType {
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
+const deriveStatus = (userType: string | null, isOrganizer: boolean): UserStatus => {
+  if (isOrganizer) return 'gestor';
+  if (userType === 'aluno' || userType === 'servidor') return 'ativo_vinculado';
+  return 'ativo_comunidade';
+};
+
 export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const deriveStatus = (userType: string | null, isOrganizer: boolean): UserStatus => {
-    if (isOrganizer) return 'gestor';
-    if (userType === 'aluno' || userType === 'servidor') return 'ativo_vinculado';
-    return 'ativo_comunidade';
-  };
-
-  const fetchProfile = async (supabaseUser: SupabaseUser) => {
+  const fetchProfile = useCallback(async (supabaseUser: SupabaseUser) => {
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
@@ -51,7 +51,6 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
           avatar_url: profile.avatar_url || ''
         } as User);
       } else {
-        // Perfil básico se não encontrar no banco
         setUser({
           id: supabaseUser.id,
           nome: supabaseUser.user_metadata?.full_name || 'Usuário',
@@ -65,11 +64,15 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
     } catch (err) {
       console.error("[UserContext] Erro ao buscar perfil:", err);
     }
-  };
+  }, []);
 
   useEffect(() => {
+    let mounted = true;
+
     const initialize = async () => {
       const { data: { session: initialSession } } = await supabase.auth.getSession();
+      if (!mounted) return;
+      
       setSession(initialSession);
       if (initialSession) {
         await fetchProfile(initialSession.user);
@@ -80,6 +83,8 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
     initialize();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      if (!mounted) return;
+      
       setSession(currentSession);
       if (currentSession) {
         await fetchProfile(currentSession.user);
@@ -90,9 +95,10 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [fetchProfile]);
 
   const login = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -121,6 +127,8 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
       await supabase.auth.signOut();
       setUser(null);
       setSession(null);
+    } catch (err) {
+      console.error("[UserContext] Erro no logout:", err);
     } finally {
       setLoading(false);
     }

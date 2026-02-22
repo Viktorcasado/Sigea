@@ -6,8 +6,8 @@ import { BadgeCheck, Download, Copy, Award, Search, Loader2 } from 'lucide-react
 import { useUser } from '@/src/contexts/UserContext';
 import { supabase } from '@/src/integrations/supabase/client';
 import { Certificate } from '@/src/types';
-import jsPDF from 'jspdf';
-import QRCode from 'qrcode';
+import { jsPDF } from 'jspdf';
+import * as QRCode from 'qrcode';
 import { motion } from 'motion/react';
 
 export default function CertificatesPage() {
@@ -33,25 +33,30 @@ export default function CertificatesPage() {
           .eq('user_id', user.id);
 
         if (!error && data) {
-          const formatted: Certificate[] = data.map(c => ({
-            id: c.id,
-            userId: c.user_id,
-            eventoId: c.evento_id,
-            codigo: c.codigo_certificado,
-            dataEmissao: new Date(c.emitido_em),
-            event: c.events ? {
-              id: c.events.id,
-              titulo: c.events.title,
-              instituicao: 'IFAL',
-              campus: c.events.campus,
-              dataInicio: new Date(c.events.date),
-              local: c.events.location || '',
-              descricao: c.events.description || '',
-              modalidade: 'Presencial',
-              status: 'publicado',
-              carga_horaria: c.events.workload || 0
-            } : undefined
-          }));
+          const formatted: Certificate[] = data.map(c => {
+            // Trata o caso onde o Supabase pode retornar um array para a relação
+            const eventData = Array.isArray(c.events) ? c.events[0] : c.events;
+            
+            return {
+              id: c.id,
+              userId: c.user_id,
+              eventoId: c.evento_id,
+              codigo: c.codigo_certificado,
+              dataEmissao: new Date(c.emitido_em),
+              event: eventData ? {
+                id: eventData.id,
+                titulo: eventData.title,
+                instituicao: 'IFAL',
+                campus: eventData.campus,
+                dataInicio: new Date(eventData.date),
+                local: eventData.location || '',
+                descricao: eventData.description || '',
+                modalidade: 'Presencial',
+                status: 'publicado',
+                carga_horaria: eventData.workload || 0
+              } : undefined
+            };
+          });
           setCertificates(formatted);
         }
       } catch (err) {

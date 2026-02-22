@@ -43,7 +43,7 @@ const ProfileHeader = ({ user }: ProfileHeaderProps) => {
       className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center text-center sm:flex-row sm:text-left sm:items-center gap-6"
     >
       <div className="relative">
-        {user.avatar_url && user.avatar_url.startsWith('http') ? (
+        {typeof user.avatar_url === 'string' && user.avatar_url.startsWith('http') ? (
           <img 
             src={user.avatar_url} 
             alt={user.nome} 
