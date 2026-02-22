@@ -29,17 +29,8 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const initialized = useRef(false);
-  const lastFetchedUserId = useRef<string | null>(null);
 
   const fetchProfile = useCallback(async (supabaseUser: SupabaseUser) => {
-    // Evita buscas duplicadas para o mesmo usuário se já estiver carregando ou carregado
-    if (lastFetchedUserId.current === supabaseUser.id && user) {
-      setLoading(false);
-      return;
-    }
-    
-    lastFetchedUserId.current = supabaseUser.id;
-    
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
@@ -68,36 +59,34 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
 
+    // Função para inicializar a sessão de forma síncrona com o estado do Supabase
     const initAuth = async () => {
-      try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      
+      if (initialSession) {
         setSession(initialSession);
-        if (initialSession) {
-          await fetchProfile(initialSession.user);
-        } else {
-          setLoading(false);
-        }
-      } catch (err) {
-        console.error("[UserContext] Erro na inicialização:", err);
+        await fetchProfile(initialSession.user);
+      } else {
         setLoading(false);
       }
     };
 
     initAuth();
 
+    // Listener para mudanças de estado (login, logout, refresh de token)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      setSession(currentSession);
-      if (currentSession) {
-        await fetchProfile(currentSession.user);
-      } else {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        setSession(currentSession);
+        if (currentSession) await fetchProfile(currentSession.user);
+      } else if (event === 'SIGNED_OUT') {
+        setSession(null);
         setUser(null);
-        lastFetchedUserId.current = null;
         setLoading(false);
       }
     });
@@ -133,7 +122,6 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
     } finally {
       setUser(null);
       setSession(null);
-      lastFetchedUserId.current = null;
       setLoading(false);
     }
   };
