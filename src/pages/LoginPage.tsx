@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import { useUser } from '@/src/contexts/UserContext';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Loader2, ArrowLeft, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
-  const { login, loginWithGoogle, loading } = useUser();
+  const { login, loginWithGoogle, loading: authLoading } = useUser();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -22,8 +23,13 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
+      // O redirecionamento é feito automaticamente pelo ProtectedRoute/PublicRoute
+      // mas podemos forçar se necessário ou apenas aguardar o estado global mudar.
     } catch (err: any) {
-      setError('E-mail ou senha incorretos.');
+      console.error("[Login] Erro ao entrar:", err);
+      setError(err.message === 'Invalid login credentials' 
+        ? 'E-mail ou senha incorretos.' 
+        : 'Ocorreu um erro ao tentar entrar. Verifique sua conexão.');
       setIsLocalLoading(false);
     }
   };
@@ -37,11 +43,11 @@ export default function LoginPage() {
     }
   };
 
-  const isProcessing = loading || isLocalLoading;
+  const isProcessing = authLoading || isLocalLoading;
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4 font-sans">
-      <div className="w-full max-md p-8 space-y-6 bg-white rounded-3xl shadow-xl border border-gray-100">
+      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-3xl shadow-xl border border-gray-100">
         <div className="text-center flex flex-col items-center">
           <Link to="/" className="inline-flex items-center gap-2 mb-6 text-indigo-600 font-bold hover:text-indigo-700 transition-colors self-start">
             <ArrowLeft className="w-4 h-4" />
@@ -72,7 +78,12 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1 ml-1">Senha</label>
+            <div className="flex justify-between items-center mb-1 ml-1">
+              <label className="block text-sm font-bold text-gray-700">Senha</label>
+              <Link to="/forgot-password" title="Recuperar senha" className="text-xs font-bold text-indigo-600 hover:underline">
+                Esqueceu a senha?
+              </Link>
+            </div>
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
@@ -96,7 +107,7 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="p-3 bg-red-50 border border-red-100 text-red-600 text-xs font-bold rounded-xl text-center">
+            <div className="p-3 bg-red-50 border border-red-100 text-red-600 text-xs font-bold rounded-xl text-center animate-in fade-in slide-in-from-top-1">
               {error}
             </div>
           )}
@@ -106,7 +117,12 @@ export default function LoginPage() {
             disabled={isProcessing}
             className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 disabled:bg-indigo-300 flex items-center justify-center gap-2"
           >
-            {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Entrar'}
+            {isProcessing ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Entrando...</span>
+              </>
+            ) : 'Entrar'}
           </button>
         </form>
 

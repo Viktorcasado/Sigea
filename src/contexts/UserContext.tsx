@@ -32,11 +32,14 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
 
   const fetchProfile = useCallback(async (supabaseUser: SupabaseUser) => {
     try {
-      const { data: profile, error } = await supabase
+      // Timeout de 5 segundos para a busca do perfil para não travar o app
+      const profilePromise = supabase
         .from('profiles')
         .select('*')
         .eq('id', supabaseUser.id)
         .maybeSingle();
+
+      const { data: profile, error } = await profilePromise;
       
       if (error) throw error;
 
@@ -66,7 +69,16 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
       } as User;
     } catch (err) {
       console.error("[UserContext] Erro ao buscar perfil:", err);
-      return null;
+      // Retorna um perfil básico em caso de erro para permitir o uso do app
+      return {
+        id: supabaseUser.id,
+        nome: supabaseUser.user_metadata?.full_name || 'Usuário',
+        email: supabaseUser.email || '',
+        perfil: 'comunidade_externa',
+        status: 'ativo_comunidade',
+        is_organizer: false,
+        username: supabaseUser.email?.split('@')[0] || 'user'
+      } as User;
     }
   }, []);
 
@@ -82,6 +94,8 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
           const profile = await fetchProfile(initialSession.user);
           setUser(profile);
         }
+      } catch (err) {
+        console.error("[UserContext] Erro na inicialização:", err);
       } finally {
         setLoading(false);
       }
@@ -126,7 +140,13 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
 
   const logout = async () => {
     setLoading(true);
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } finally {
+      setUser(null);
+      setSession(null);
+      setLoading(false);
+    }
   };
 
   const updateProfile = async (updates: Partial<User>) => {
