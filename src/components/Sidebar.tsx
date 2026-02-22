@@ -3,6 +3,7 @@
 import { NavLink, Link } from 'react-router-dom';
 import { Home, Compass, Award, User, Bell, LogOut, LogIn } from 'lucide-react';
 import { useUser } from '@/src/contexts/UserContext';
+import Logo from './Logo';
 
 export default function Sidebar() {
   const { user, logout } = useUser();
@@ -20,20 +21,7 @@ export default function Sidebar() {
   return (
     <aside className="hidden lg:flex flex-col w-72 bg-white border-r border-gray-100 h-screen sticky top-0 p-6">
       <div className="mb-10 px-2">
-        <Link to="/" className="flex items-center gap-3">
-          <img 
-            src="/assets/logo-light.jpg" 
-            alt="SIGEA" 
-            className="w-10 h-10 rounded-xl object-contain"
-            loading="eager"
-            decoding="async"
-            width="40"
-            height="40"
-          />
-          <span className="text-2xl font-black text-gray-900 tracking-tighter">
-            SIGEA<span className="text-indigo-600">.</span>
-          </span>
-        </Link>
+        <Logo />
       </div>
 
       <nav className="flex-1 space-y-2">
