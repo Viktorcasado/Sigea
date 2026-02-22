@@ -3,24 +3,28 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '@/src/contexts/UserContext';
-import { Presenca, Activity } from '@/src/types';
-import { PresencaRepositoryMock } from '@/src/repositories/PresencaRepository';
-import { ActivityRepositoryMock } from '@/src/repositories/ActivityRepository';
+import { Activity } from '@/src/types';
+import { PresencaRepository } from '@/src/repositories/PresencaRepository';
+import { ActivityRepository } from '@/src/repositories/ActivityRepository';
 import { ArrowLeft, CheckCircle, Clock, Calendar } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export default function UserPresencesPage() {
   const { user } = useUser();
-  const [presences, setPresences] = useState<Presenca[]>([]);
-  const [activities, setActivities] = useState<Record<string, Activity>>({});
+  const [presences, setPresences] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
       const loadData = async () => {
-        const userPresences = await PresencaRepositoryMock.listByUser(user.id);
-        setPresences(userPresences);
-        setLoading(false);
+        try {
+          const userPresences = await PresencaRepository.listByUser(user.id);
+          setPresences(userPresences);
+        } catch (error) {
+          console.error("Erro ao carregar presenças:", error);
+        } finally {
+          setLoading(false);
+        }
       };
       loadData();
     }
@@ -67,11 +71,11 @@ export default function UserPresencesPage() {
                   <CheckCircle className="w-6 h-6 text-green-600" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-800">Atividade Confirmada</h3>
+                  <h3 className="font-bold text-gray-800">{presence.activities?.title || 'Atividade Confirmada'}</h3>
                   <div className="flex items-center gap-3 text-sm text-gray-500 mt-1">
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3.5 h-3.5" />
-                      {new Date(presence.createdAt).toLocaleDateString('pt-BR')}
+                      {new Date(presence.created_at).toLocaleDateString('pt-BR')}
                     </span>
                   </div>
                 </div>
