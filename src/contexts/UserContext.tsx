@@ -71,6 +71,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   useEffect(() => {
     const initAuth = async () => {
       try {
+        // Verifica se há uma sessão inicial (útil para recarregamento de página)
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         if (initialSession) {
           setSession(initialSession);
@@ -86,7 +87,10 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
 
     initAuth();
 
+    // Escuta mudanças no estado de autenticação (Login, Logout, Token Refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      console.log(`[UserContext] Auth Event: ${event}`);
+      
       if (currentSession) {
         setSession(currentSession);
         await fetchProfile(currentSession.user);
@@ -123,19 +127,20 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   };
 
   const loginWithGoogle = async () => {
-    // Usamos o origin puro para que o Supabase redirecione corretamente.
-    // O fragmento #/auth/callback será anexado pelo Supabase se configurado no dashboard,
-    // ou lidamos com isso via redirectTo.
-    await supabase.auth.signInWithOAuth({ 
+    // IMPORTANTE: Para HashRouter, redirecionamos para a raiz sem o hash.
+    // O Supabase anexará o token como #access_token=...
+    // Nós capturaremos isso na inicialização do app.
+    const { error } = await supabase.auth.signInWithOAuth({ 
       provider: 'google',
       options: { 
-        redirectTo: `${window.location.origin}/#/auth/callback`,
+        redirectTo: window.location.origin, // Redireciona para a URL base
         queryParams: {
           access_type: 'offline',
           prompt: 'consent',
         }
       }
     });
+    if (error) throw error;
   };
 
   const logout = async () => {
