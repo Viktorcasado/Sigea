@@ -56,6 +56,15 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
       setUser(basicUser);
     } catch (err) {
       console.error("[UserContext] Erro ao buscar perfil:", err);
+      // Mesmo com erro, definimos um usuário básico para não travar a UI
+      setUser({
+        id: supabaseUser.id,
+        nome: supabaseUser.user_metadata?.full_name || 'Usuário',
+        email: supabaseUser.email || '',
+        perfil: 'comunidade_externa',
+        status: 'ativo_comunidade',
+        is_organizer: false
+      } as User);
     } finally {
       setLoading(false);
     }
@@ -65,23 +74,20 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
     if (initialized.current) return;
     initialized.current = true;
 
-    // 1. Sincroniza a sessão inicial
-    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
-      if (initialSession) {
-        setSession(initialSession);
-        fetchProfile(initialSession.user);
-      } else {
+    // Timeout de segurança: se em 5 segundos não carregar, libera a UI
+    const safetyTimeout = setTimeout(() => {
+      if (loading) {
+        console.warn("[UserContext] Timeout de segurança atingido. Liberando UI.");
         setLoading(false);
       }
-    });
+    }, 5000);
 
-    // 2. Escuta mudanças de estado (Login, Logout, Refresh)
+    // O onAuthStateChange com INITIAL_SESSION lida com tudo
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       console.log(`[UserContext] Auth Event: ${event}`);
       
       if (currentSession) {
         setSession(currentSession);
-        // Só busca o perfil se o usuário mudou ou se ainda não temos o perfil
         await fetchProfile(currentSession.user);
       } else {
         setSession(null);
@@ -90,7 +96,10 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(safetyTimeout);
+      subscription.unsubscribe();
+    };
   }, [fetchProfile]);
 
   const login = async (email: string, password: string) => {
