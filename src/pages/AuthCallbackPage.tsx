@@ -10,11 +10,12 @@ export default function AuthCallbackPage() {
   const processed = useRef(false);
 
   useEffect(() => {
+    // Evita processamento duplo em ambientes de desenvolvimento (Strict Mode)
     if (processed.current) return;
     
     const handleCallback = async () => {
       try {
-        // O Supabase processa o hash da URL automaticamente ao chamar getSession
+        // O Supabase recupera automaticamente a sessão do fragmento da URL (#access_token=...)
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) throw error;
@@ -23,18 +24,21 @@ export default function AuthCallbackPage() {
           processed.current = true;
           console.log("[AuthCallback] Sessão recuperada com sucesso");
           
-          // Limpa a URL para remover os tokens expostos
-          window.history.replaceState({}, document.title, window.location.pathname);
-          
-          // Redireciona para a home
+          // Redireciona para a home de forma limpa
+          // Usamos replace: true para que o usuário não consiga voltar para a página de callback
           navigate('/', { replace: true });
         } else {
-          // Se não houver sessão após o callback, algo deu errado ou o usuário cancelou
-          console.warn("[AuthCallback] Nenhuma sessão encontrada no callback");
-          navigate('/login', { replace: true });
+          // Se não houver sessão, aguarda um pouco (pode ser delay de rede) ou volta para o login
+          const timeout = setTimeout(() => {
+            if (!processed.current) {
+              console.warn("[AuthCallback] Nenhuma sessão encontrada após timeout");
+              navigate('/login', { replace: true });
+            }
+          }, 2000);
+          return () => clearTimeout(timeout);
         }
       } catch (err) {
-        console.error("[AuthCallback] Erro crítico no processamento do OAuth:", err);
+        console.error("[AuthCallback] Erro no processamento do OAuth:", err);
         navigate('/login', { replace: true });
       }
     };

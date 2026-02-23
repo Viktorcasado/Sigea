@@ -123,10 +123,18 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   };
 
   const loginWithGoogle = async () => {
-    // Corrigido para incluir o hash /#/ para que o HashRouter capture a rota no retorno
+    // Usamos o origin puro para que o Supabase redirecione corretamente.
+    // O fragmento #/auth/callback será anexado pelo Supabase se configurado no dashboard,
+    // ou lidamos com isso via redirectTo.
     await supabase.auth.signInWithOAuth({ 
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/#/auth/callback` }
+      options: { 
+        redirectTo: `${window.location.origin}/#/auth/callback`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        }
+      }
     });
   };
 
