@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useState, useContext, ReactNode, FC, useEffect, useCallback, useRef } from 'react';
+import { createContext, useState, useContext, ReactNode, FC, useEffect, useCallback } from 'react';
 import { User, UserStatus } from '@/src/types';
 import { supabase } from '@/src/integrations/supabase/client';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
@@ -28,7 +28,6 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const isInitialMount = useRef(true);
 
   const fetchProfile = useCallback(async (supabaseUser: SupabaseUser) => {
     try {
@@ -56,6 +55,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
       setUser(basicUser);
     } catch (err) {
       console.error("[UserContext] Erro ao buscar perfil:", err);
+      // Fallback para dados básicos do Auth se o perfil falhar
       setUser({
         id: supabaseUser.id,
         nome: supabaseUser.user_metadata?.full_name || 'Usuário',
@@ -68,17 +68,9 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    const initAuth = async () => {
-      if (!isInitialMount.current) return;
-      isInitialMount.current = false;
-
+    // Recupera a sessão inicial de forma síncrona onde possível
+    const initialize = async () => {
       try {
-        // No mobile, o HashRouter pode "comer" o fragmento do Supabase.
-        // Verificamos se a URL contém dados de auth antes de inicializar.
-        if (window.location.hash.includes('access_token=')) {
-          // Deixa o Supabase processar o hash naturalmente
-        }
-
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         if (initialSession) {
           setSession(initialSession);
@@ -91,15 +83,14 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
       }
     };
 
-    initAuth();
+    initialize();
 
+    // Escuta mudanças de estado (Login, Logout, Refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        if (currentSession) {
-          setSession(currentSession);
-          await fetchProfile(currentSession.user);
-        }
-      } else if (event === 'SIGNED_OUT') {
+      if (currentSession) {
+        setSession(currentSession);
+        await fetchProfile(currentSession.user);
+      } else {
         setSession(null);
         setUser(null);
       }
@@ -111,8 +102,10 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+    } catch (error) {
       setLoading(false);
       throw error;
     }
@@ -120,28 +113,24 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
 
   const signUp = async (email: string, password: string, metadata: any) => {
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: metadata }
-    });
-    if (error) {
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: metadata }
+      });
+      if (error) throw error;
+    } catch (error) {
       setLoading(false);
       throw error;
     }
   };
 
   const loginWithGoogle = async () => {
-    // No mobile, forçamos o redirecionamento para a URL base sem hash
-    // para que o Supabase consiga injetar o token corretamente.
     const { error } = await supabase.auth.signInWithOAuth({ 
       provider: 'google',
       options: { 
         redirectTo: window.location.origin + '/',
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
-        }
       }
     });
     if (error) throw error;
