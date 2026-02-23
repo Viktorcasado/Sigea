@@ -55,7 +55,6 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
       setUser(basicUser);
     } catch (err) {
       console.error("[UserContext] Erro ao buscar perfil:", err);
-      // Fallback para não travar a aplicação
       setUser({
         id: supabaseUser.id,
         nome: supabaseUser.user_metadata?.full_name || 'Usuário',
@@ -70,7 +69,6 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    // 1. Checagem inicial de sessão
     const initAuth = async () => {
       try {
         const { data: { session: initialSession } } = await supabase.auth.getSession();
@@ -88,7 +86,6 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
 
     initAuth();
 
-    // 2. Ouvinte de mudanças de estado
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       if (currentSession) {
         setSession(currentSession);
@@ -126,9 +123,10 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   };
 
   const loginWithGoogle = async () => {
+    // Corrigido para incluir o hash /#/ para que o HashRouter capture a rota no retorno
     await supabase.auth.signInWithOAuth({ 
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` }
+      options: { redirectTo: `${window.location.origin}/#/auth/callback` }
     });
   };
 
