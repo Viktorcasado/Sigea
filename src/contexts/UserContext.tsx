@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useState, useContext, ReactNode, FC, useEffect, useCallback, useRef } from 'react';
+import { createContext, useState, useContext, ReactNode, FC, useEffect, useCallback } from 'react';
 import { User, UserStatus } from '@/src/types';
 import { supabase } from '@/src/integrations/supabase/client';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
@@ -28,7 +28,6 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const initialized = useRef(false);
 
   const fetchProfile = useCallback(async (supabaseUser: SupabaseUser) => {
     try {
@@ -56,7 +55,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
       setUser(basicUser);
     } catch (err) {
       console.error("[UserContext] Erro ao buscar perfil:", err);
-      // Mesmo com erro, definimos um usuário básico para não travar a UI
+      // Fallback para não travar a aplicação
       setUser({
         id: supabaseUser.id,
         nome: supabaseUser.user_metadata?.full_name || 'Usuário',
@@ -71,21 +70,26 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-
-    // Timeout de segurança: se em 5 segundos não carregar, libera a UI
-    const safetyTimeout = setTimeout(() => {
-      if (loading) {
-        console.warn("[UserContext] Timeout de segurança atingido. Liberando UI.");
+    // 1. Checagem inicial de sessão
+    const initAuth = async () => {
+      try {
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        if (initialSession) {
+          setSession(initialSession);
+          await fetchProfile(initialSession.user);
+        } else {
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error("[UserContext] Erro na inicialização:", error);
         setLoading(false);
       }
-    }, 5000);
+    };
 
-    // O onAuthStateChange com INITIAL_SESSION lida com tudo
+    initAuth();
+
+    // 2. Ouvinte de mudanças de estado
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      console.log(`[UserContext] Auth Event: ${event}`);
-      
       if (currentSession) {
         setSession(currentSession);
         await fetchProfile(currentSession.user);
@@ -96,10 +100,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
       }
     });
 
-    return () => {
-      clearTimeout(safetyTimeout);
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, [fetchProfile]);
 
   const login = async (email: string, password: string) => {
