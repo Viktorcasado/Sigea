@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Vinculo, VinculoStatus } from '@/src/types';
-import { VinculoRepositoryMock } from '@/src/repositories/VinculoRepository';
+import { VinculoRepository } from '@/src/repositories/VinculoRepository';
 import { Check, X } from 'lucide-react';
 
 const StatusBadge = ({ status }: { status: VinculoStatus }) => {
@@ -22,7 +22,7 @@ export default function GestorVinculosPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    VinculoRepositoryMock.listByStatus('pendente').then(data => {
+    VinculoRepository.listByStatus('pendente').then(data => {
       setVinculos(data);
       setIsLoading(false);
     });
@@ -30,7 +30,7 @@ export default function GestorVinculosPage() {
 
   const handleUpdateStatus = (vinculoId: number, status: VinculoStatus) => {
     // Em uma app real, você pode querer um modal de confirmação ou para adicionar um motivo de rejeição
-    VinculoRepositoryMock.updateStatus(vinculoId, status).then(() => {
+    VinculoRepository.updateStatus(vinculoId, status).then(() => {
         setVinculos(vinculos.filter(v => v.id !== vinculoId));
         alert(`Vínculo ${status === 'aprovado' ? 'aprovado' : 'rejeitado'} com sucesso!`);
     });
@@ -62,12 +62,12 @@ export default function GestorVinculosPage() {
               {vinculos.map(vinculo => (
                 <tr key={vinculo.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900">{vinculo.user_nome}</div>
-                      <div className="text-sm text-gray-500">{vinculo.user_email}</div>
+                      <div className="font-medium text-gray-900">{vinculo.user_id}</div>
+                      <div className="text-sm text-gray-500">{vinculo.user_id}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div>{vinculo.perfil_solicitado} - {vinculo.instituicao}</div>
-                      <div>Matrícula/SIAPE: {vinculo.matricula_ou_siape}</div>
+                      <div>{vinculo.user_id} - {vinculo.instituicao}</div>
+                      <div>Matrícula/SIAPE: {vinculo.matricula}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(vinculo.created_at).toLocaleDateString('pt-BR')}

@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Search, CheckCircle, XCircle, QrCode } from 'lucide-react';
-import { mockCertificates } from '@/src/data/mock';
-import { mockEvents } from '@/src/data/mock';
+
 import { Certificate, Event } from '@/src/types';
 
 interface ValidationResult {
@@ -16,16 +15,8 @@ export default function ValidateCertificatePage() {
   const [validationStatus, setValidationStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
   const [result, setResult] = useState<ValidationResult | null>(null);
 
-  const handleValidation = () => {
-    const certificate = mockCertificates.find(c => c.codigo_validacao.toUpperCase() === code.toUpperCase());
-    if (certificate) {
-      const event = mockEvents.find(e => e.id === certificate.evento_id);
-      if (event) {
-        setResult({ certificate, event });
-        setValidationStatus('valid');
-        return;
-      }
-    }
+  const handleValidation = async () => {
+    // TODO: Implement CertificateRepository
     setResult(null);
     setValidationStatus('invalid');
   };
@@ -72,7 +63,7 @@ export default function ValidateCertificatePage() {
                 <div className="mt-4 pl-9 text-gray-700 space-y-2">
                     <p><strong>Evento:</strong> {result.event.titulo}</p>
                     <p><strong>Instituição:</strong> {result.event.instituicao} - {result.event.campus}</p>
-                    <p><strong>Carga Horária:</strong> {result.certificate.carga_horaria}h</p>
+                    <p><strong>Carga Horária:</strong> {result.certificate.carga_horaria_minutos ? Math.floor(result.certificate.carga_horaria_minutos / 60) : 'N/A'}h</p>
                     <p><strong>Data de Emissão:</strong> {new Date(result.certificate.data_emissao).toLocaleDateString('pt-BR')}</p>
                     <p><strong>Código:</strong> {result.certificate.codigo_validacao}</p>
                 </div>

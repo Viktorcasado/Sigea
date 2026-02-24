@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { supabase } from '@/src/services/supabase';
+import { EventRepository } from '@/src/repositories/EventRepository';
+import { InscricaoRepository } from '@/src/repositories/InscricaoRepository';
 import { Event } from '@/src/types';
 import { useUser } from '@/src/contexts/UserContext';
-import { checkInscription, createInscription, deleteInscription } from '@/src/services/inscriptionService';
 import { useNotifications } from '@/src/contexts/NotificationContext';
 import { ArrowLeft, Share2, Calendar, MapPin, CheckCircle, XCircle } from 'lucide-react';
 
@@ -20,25 +20,30 @@ export default function EventDetailPage() {
   const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(false);
 
   useEffect(() => {
-    const fetchEvent = async () => {
-      if (!id) return;
+    if (!id) return;
 
+    const eventId = parseInt(id, 10);
+    if (isNaN(eventId)) {
+      setError('ID de evento inválido.');
+      setLoading(false);
+      return;
+    }
+
+    const fetchEventData = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
-          .from('events')
-          .select('*')
-          .eq('id', id)
-          .single();
-
-        if (error) throw error;
-        setEvent(data as Event);
+        const eventData = await EventRepository.findById(eventId);
+        if (!eventData) {
+          setError('Evento não encontrado.');
+          setEvent(null);
+          return;
+        }
+        setEvent(eventData);
 
         if (user) {
-          const subscribed = await checkInscription(user.id, parseInt(id));
-          setIsSubscribed(subscribed);
+          const status = await InscricaoRepository.getStatus(eventId, user.id);
+          setIsSubscribed(status === 'confirmada');
         }
-
       } catch (err) {
         setError('Não foi possível carregar o evento.');
         console.error(err);
@@ -47,7 +52,7 @@ export default function EventDetailPage() {
       }
     };
 
-    fetchEvent();
+    fetchEventData();
   }, [id, user]);
 
   const handleSubscription = async () => {
@@ -56,7 +61,7 @@ export default function EventDetailPage() {
     setIsSubscriptionLoading(true);
     try {
       if (isSubscribed) {
-        await deleteInscription(user.id, event.id);
+        await InscricaoRepository.cancel(event.id, user.id);
         setIsSubscribed(false);
         addNotification({
           titulo: 'Inscrição Cancelada',
@@ -64,7 +69,10 @@ export default function EventDetailPage() {
           tipo: 'aviso',
         });
       } else {
-        await createInscription(user.id, event.id);
+        await InscricaoRepository.create({
+          user_id: user.id,
+          event_id: event.id
+        });
         setIsSubscribed(true);
         addNotification({
           titulo: 'Inscrição Confirmada',

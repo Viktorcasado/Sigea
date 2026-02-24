@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useUser } from '@/src/contexts/UserContext';
 import { Activity } from '@/src/types';
-import { ActivityRepositoryMock } from '@/src/repositories/ActivityRepository';
+import { ActivityRepository } from '@/src/repositories/ActivityRepository';
 import { ArrowLeft, PlusCircle, Edit, Trash2 } from 'lucide-react';
 
 export default function ManageActivitiesPage() {
@@ -13,14 +13,14 @@ export default function ManageActivitiesPage() {
 
   useEffect(() => {
     if (eventId) {
-      ActivityRepositoryMock.listByEvent(eventId).then(setActivities);
+      ActivityRepository.listByEvent(parseInt(eventId, 10)).then(setActivities);
     }
   }, [eventId]);
 
   const handleDelete = (activityId: number) => {
     if (window.confirm('Tem certeza que deseja excluir esta atividade?')) {
       if (!eventId) return;
-      ActivityRepositoryMock.deleteActivity(Number(eventId), activityId).then(() => {
+      ActivityRepository.delete(activityId).then(() => {
         setActivities(prev => prev.filter(a => a.id !== activityId));
       });
     }

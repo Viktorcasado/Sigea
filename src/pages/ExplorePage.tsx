@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Search, SlidersHorizontal, Star, X } from 'lucide-react';
-import { mockEvents } from '@/src/data/mock';
+import { EventRepository } from '@/src/repositories/EventRepository';
 import { Event } from '@/src/types';
 import EventCard from '@/src/components/EventCard';
 
@@ -19,39 +19,48 @@ function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
 export default function ExplorePage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showFavorites, setShowFavorites] = useState(false);
-  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [favorites, setFavorites] = useState<Set<number>>(new Set());
+  const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate initial data loading
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 800);
-    return () => clearTimeout(timer);
+    EventRepository.listAll()
+      .then(data => {
+        setEvents(data);
+      })
+      .catch(err => {
+        console.error('Failed to fetch events:', err);
+        // Here you might want to set an error state to show in the UI
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, []);
 
-  const toggleFavorite = (eventId: number) => {
+  const toggleFavorite = (eventId: string) => {
+    const numericEventId = parseInt(eventId, 10);
+    if (isNaN(numericEventId)) return;
     setFavorites(prev => {
       const newFavs = new Set(prev);
-      if (newFavs.has(eventId)) {
-        newFavs.delete(eventId);
+      if (newFavs.has(numericEventId)) {
+        newFavs.delete(numericEventId);
       } else {
-        newFavs.add(eventId);
+        newFavs.add(numericEventId);
       }
       return newFavs;
     });
   };
 
   const filteredEvents = useMemo(() => {
-    let events = mockEvents;
+    let filtered = events;
 
     if (showFavorites) {
-        events = events.filter(event => favorites.has(String(event.id)));
+      filtered = filtered.filter(event => favorites.has(event.id));
     }
 
     if (searchTerm) {
       const lowercasedTerm = searchTerm.toLowerCase();
-      events = events.filter(
+      filtered = filtered.filter(
         event =>
           event.titulo.toLowerCase().includes(lowercasedTerm) ||
           event.campus.toLowerCase().includes(lowercasedTerm) ||
@@ -59,7 +68,7 @@ export default function ExplorePage() {
       );
     }
 
-    return events;
+    return filtered;
   }, [searchTerm, showFavorites, favorites]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,7 +119,7 @@ export default function ExplorePage() {
                 key={event.id} 
                 event={event} 
                 variant="list" 
-                isFavorite={favorites.has(String(event.id))}
+                isFavorite={favorites.has(event.id)}
                 onToggleFavorite={toggleFavorite}
               />
             ))}

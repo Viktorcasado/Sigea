@@ -1,45 +1,52 @@
-import { Inscricao, InscricaoStatus } from '@/src/types';
-import { mockUsers } from '@/src/data/mock';
+import { supabase } from '@/src/services/supabase';
+import { Inscricao } from '@/src/types';
 
-const mockInscricoesDB: Inscricao[] = [
-  { id: 1, event_id: 2, user_id: mockUsers[1].id, status_inscricao: 'confirmada', created_at: new Date() },
-  { id: 2, event_id: 3, user_id: mockUsers[2].id, status_inscricao: 'confirmada', created_at: new Date() },
-];
-
-export const InscricaoRepositoryMock = {
-  async getStatus(eventId: number, userId: string): Promise<InscricaoStatus | null> {
-    const inscricao = mockInscricoesDB.find(i => i.event_id === eventId && i.user_id === userId);
-    return inscricao ? inscricao.status_inscricao : null;
+export const InscricaoRepository = {
+  async getStatus(eventId: number, userId: string): Promise<string | null> {
+    const { data, error } = await supabase
+      .from('inscricoes')
+      .select('status')
+      .eq('event_id', eventId)
+      .eq('user_id', userId)
+      .single();
+    if (error) return null;
+    return data?.status || null;
   },
 
   async listByEvento(eventId: number): Promise<Inscricao[]> {
-    return mockInscricoesDB.filter(i => i.event_id === eventId && i.status_inscricao === 'confirmada');
+    const { data, error } = await supabase.from('inscricoes').select('*').eq('event_id', eventId);
+    if (error) throw new Error(error.message);
+    return data || [];
   },
 
   async listByUser(userId: string): Promise<Inscricao[]> {
-    return mockInscricoesDB.filter(i => i.user_id === userId && i.status_inscricao === 'confirmada');
+    const { data, error } = await supabase.from('inscricoes').select('*').eq('user_id', userId);
+    if (error) throw new Error(error.message);
+    return data || [];
   },
 
-  async createInscricao(eventId: number, userId: string): Promise<Inscricao> {
-    const newInscricao: Inscricao = {
-      id: Math.floor(Math.random() * 10000),
-      event_id: eventId,
-      user_id: userId,
-      status_inscricao: 'confirmada',
-      created_at: new Date(),
-    };
-    mockInscricoesDB.push(newInscricao);
-    return newInscricao;
+  async create(inscricaoData: Omit<Inscricao, 'id' | 'created_at'>): Promise<Inscricao> {
+    const { data, error } = await supabase.from('inscricoes').insert(inscricaoData).select().single();
+    if (error) throw new Error(error.message);
+    return data;
   },
 
-  async cancelInscricao(eventId: number, userId: string): Promise<void> {
-    const index = mockInscricoesDB.findIndex(i => i.event_id === eventId && i.user_id === userId);
-    if (index > -1) {
-      mockInscricoesDB[index].status_inscricao = 'cancelada';
-    }
+  async cancel(eventId: number, userId: string): Promise<void> {
+    const { error } = await supabase
+      .from('inscricoes')
+      .update({ status: 'cancelada' })
+      .eq('event_id', eventId)
+      .eq('user_id', userId);
+    if (error) throw new Error(error.message);
   },
 
   async countByEvento(eventId: number): Promise<number> {
-    return mockInscricoesDB.filter(i => i.event_id === eventId && i.status_inscricao === 'confirmada').length;
+    const { count, error } = await supabase
+      .from('inscricoes')
+      .select('*', { count: 'exact', head: true })
+      .eq('event_id', eventId)
+      .eq('status', 'confirmada');
+    if (error) throw new Error(error.message);
+    return count || 0;
   },
 };

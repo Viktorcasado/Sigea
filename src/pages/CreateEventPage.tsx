@@ -3,19 +3,7 @@ import { useUser } from '@/src/contexts/UserContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Event, EventInstitution, EventModality } from '@/src/types';
-
-// This would be in a repository file in a real app
-import { mockEvents } from '@/src/data/mock';
-
-const createEventMock = (eventData: Omit<Event, 'id' | 'status'>) => {
-  const newEvent: Event = {
-    ...eventData,
-    id: Math.floor(Math.random() * 10000),
-    status: 'rascunho',
-  };
-  mockEvents.push(newEvent);
-  return newEvent;
-};
+import { EventRepository } from '@/src/repositories/EventRepository';
 
 export default function CreateEventPage() {
   const { user } = useUser();
@@ -33,35 +21,41 @@ export default function CreateEventPage() {
   const [vagas, setVagas] = useState<number | undefined>();
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent, andGoToDetails = false) => {
+  const handleSubmit = async (e: React.FormEvent, andGoToDetails = false) => {
     e.preventDefault();
-    // Add full validation here
     if (titulo.length < 5 || descricao.length < 20) {
-        alert('Preencha o título e a descrição corretamente.');
-        return;
+      alert('Preencha o título e a descrição corretamente.');
+      return;
     }
 
     setIsLoading(true);
-    setTimeout(() => {
-        const newEvent = createEventMock({
-            titulo,
-            descricao,
-            instituicao: instituicao as EventInstitution,
-            campus,
-            data_inicio: new Date(dataInicio).toISOString(),
-            data_fim: new Date(dataFim).toISOString(),
-            modalidade,
-            local: `${local}${link && ' / ' + link}`,
-            vagas
-        });
-        setIsLoading(false);
-        alert('Evento salvo com sucesso!');
-        if (andGoToDetails) {
-            navigate(`/evento/${newEvent.id}`);
-        } else {
-            navigate('/');
-        }
-    }, 1500);
+    try {
+      const newEventData: Omit<Event, 'id' | 'status'> = {
+        titulo,
+        descricao,
+        instituicao: instituicao as EventInstitution,
+        campus,
+        data_inicio: new Date(dataInicio).toISOString(),
+        data_fim: new Date(dataFim).toISOString(),
+        modalidade,
+        local: `${local}${link && ' / ' + link}`,
+        vagas,
+      };
+
+      const newEvent = await EventRepository.create(newEventData);
+      
+      alert('Evento salvo com sucesso!');
+      if (andGoToDetails) {
+        navigate(`/evento/${newEvent.id}`);
+      } else {
+        navigate('/');
+      }
+    } catch (error) {
+      console.error('Failed to create event:', error);
+      alert('Ocorreu um erro ao salvar o evento. Tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

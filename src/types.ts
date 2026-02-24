@@ -52,6 +52,7 @@ export interface Certificate {
   nome_participante: string;
   data_emissao: string;
   codigo_validacao: string;
+  carga_horaria_minutos: number;
   evento: Event;
 }
 
@@ -68,6 +69,7 @@ export interface Activity {
   hora_fim: string;
   local: string;
   instrutor?: string;
+  carga_horaria_minutos?: number;
 }
 
 export type VinculoStatus = 'pendente' | 'aprovado' | 'rejeitado';

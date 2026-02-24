@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Activity, ActivityType } from '@/src/types';
-import { ActivityRepositoryMock } from '@/src/repositories/ActivityRepository';
+import { ActivityRepository } from '@/src/repositories/ActivityRepository';
 import { ArrowLeft } from 'lucide-react';
 
 const calculateDuration = (start: string, end: string): number => {
@@ -30,7 +30,7 @@ export default function ActivityFormPage() {
 
   useEffect(() => {
     if (isEditing && eventId) {
-        ActivityRepositoryMock.listByEvent(eventId).then(activities => {
+        ActivityRepository.listByEvent(parseInt(eventId, 10)).then(activities => {
             const activity = activities.find(a => a.id === Number(activityId));
             if (activity) {
                 setTitulo(activity.titulo);
@@ -52,8 +52,8 @@ export default function ActivityFormPage() {
     const activityData = { titulo, tipo, data, hora_inicio: horaInicio, hora_fim: horaFim, local, descricao, carga_horaria_minutos: cargaHoraria, event_id: Number(eventId) };
     
     const promise = isEditing
-      ? ActivityRepositoryMock.updateActivity({ ...activityData, id: Number(activityId!) })
-      : ActivityRepositoryMock.createActivity(Number(eventId), activityData);
+      ? ActivityRepository.update(Number(activityId!), activityData)
+      : ActivityRepository.create(activityData);
 
     promise.then(() => {
         setIsLoading(false);

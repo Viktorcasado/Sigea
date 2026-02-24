@@ -38,9 +38,8 @@ export default function NotificationsPage() {
     if (notification.referenciaId) {
         if (notification.tipo === 'evento') {
             navigate(`/evento/${notification.referenciaId}`);
-        } else if (notification.tipo === 'certificado') {
-            // Assuming certificate detail page would be /certificados/:id
-            navigate('/certificados'); 
+        } else if (notification.tipo === 'aviso') {
+            // Não faz nada
         }
     }
   };
@@ -79,7 +78,7 @@ export default function NotificationsPage() {
                 <div className='flex-grow'>
                     <p className='font-semibold text-gray-800'>{notification.titulo}</p>
                     <p className='text-sm text-gray-600'>{notification.mensagem}</p>
-                    <p className='text-xs text-gray-400 mt-1'><TimeAgo date={notification.created_at} /></p>
+                    <p className='text-xs text-gray-400 mt-1'><TimeAgo date={new Date(notification.created_at)} /></p>
                 </div>
               </div>
             ))}

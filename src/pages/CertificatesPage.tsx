@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import { BadgeCheck, Download, Copy } from 'lucide-react';
-import { mockCertificates } from '@/src/data/mock';
-import { mockEvents, mockUser } from '@/src/data/mock';
+
 import { Certificate, Event, User } from '@/src/types';
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
@@ -41,7 +40,7 @@ const generatePdf = async (certificate: Certificate, event: Event) => {
         console.error('Failed to generate QR code', err);
     }
 
-    doc.save(`certificado-${certificate.codigo}.pdf`);
+    doc.save(`certificado-${certificate.id}.pdf`);
 };
 
 const CertificateCard = ({ certificate }: { certificate: Certificate }) => {
@@ -94,7 +93,7 @@ export default function CertificatesPage() {
       </Link>
 
       <main className="space-y-4">
-        {mockCertificates.map(cert => (
+        {[] /* Replace with actual certificate data */.map(cert => (
           <CertificateCard key={cert.id} certificate={cert} />
         ))}
       </main>

@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '@/src/contexts/UserContext';
 import { Inscricao, Event } from '@/src/types';
-import { InscricaoRepositoryMock } from '@/src/repositories/InscricaoRepository';
-import { mockEvents } from '@/src/data/mock';
+import { InscricaoRepository } from '@/src/repositories/InscricaoRepository';
+import { EventRepository } from '@/src/repositories/EventRepository';
+
 import { ArrowLeft, Calendar } from 'lucide-react';
 
 export default function UserInscriptionsPage() {
@@ -13,11 +14,10 @@ export default function UserInscriptionsPage() {
 
   useEffect(() => {
     if (user) {
-      InscricaoRepositoryMock.listByUser(user.id).then(userInscriptions => {
+      InscricaoRepository.listByUser(user.id).then(userInscriptions => {
         setInscriptions(userInscriptions);
         const subscribedEventIds = userInscriptions.map(i => i.event_id);
-        const subscribedEvents = mockEvents.filter(e => subscribedEventIds.includes(e.id));
-        setEvents(subscribedEvents);
+        EventRepository.listByIds(subscribedEventIds).then(setEvents);
       });
     }
   }, [user]);

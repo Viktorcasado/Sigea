@@ -1,63 +1,27 @@
+import { supabase } from '@/src/services/supabase';
 import { Activity } from '@/src/types';
 
-const mockActivitiesDB: Record<number, Activity[]> = {
-  1: [
-    {
-      id: 1,
-      event_id: 1,
-      titulo: 'Abertura e Boas-vindas',
-      tipo: 'palestra',
-      data: '2026-02-20',
-      hora_inicio: '09:00',
-      hora_fim: '10:00',
-      local: 'Auditório Principal',
-      descricao: 'Direção do Campus',
-      carga_horaria_minutos: 60,
-    },
-    {
-      id: 2,
-      event_id: 1,
-      titulo: 'Introdução ao React com TypeScript',
-      tipo: 'oficina',
-      data: '2026-02-20',
-      hora_inicio: '10:30',
-      hora_fim: '12:30',
-      local: 'Laboratório 5',
-      descricao: 'Prof. João Dev',
-      carga_horaria_minutos: 120,
-    },
-  ]
-};
-
-export const ActivityRepositoryMock = {
+export const ActivityRepository = {
   async listByEvent(eventId: number): Promise<Activity[]> {
-    return mockActivitiesDB[eventId] || [];
+    const { data, error } = await supabase.from('atividades').select('*').eq('event_id', eventId);
+    if (error) throw new Error(error.message);
+    return data || [];
   },
 
-  async createActivity(eventId: number, activityData: Omit<Activity, 'id'>): Promise<Activity> {
-    if (!mockActivitiesDB[eventId]) {
-      mockActivitiesDB[eventId] = [];
-    }
-    const newActivity: Activity = {
-      ...activityData,
-      id: Math.floor(Math.random() * 10000),
-    };
-    mockActivitiesDB[eventId].push(newActivity);
-    return newActivity;
+  async create(activityData: Omit<Activity, 'id'>): Promise<Activity> {
+    const { data, error } = await supabase.from('atividades').insert(activityData).select().single();
+    if (error) throw new Error(error.message);
+    return data;
   },
 
-  async updateActivity(updatedActivity: Activity): Promise<Activity> {
-    const eventActivities = mockActivitiesDB[updatedActivity.event_id];
-    if (!eventActivities) throw new Error('Event not found');
-    const index = eventActivities.findIndex(a => a.id === updatedActivity.id);
-    if (index === -1) throw new Error('Activity not found');
-    eventActivities[index] = updatedActivity;
-    return updatedActivity;
+  async update(id: number, activityData: Partial<Omit<Activity, 'id'>>): Promise<Activity> {
+    const { data, error } = await supabase.from('atividades').update(activityData).eq('id', id).select().single();
+    if (error) throw new Error(error.message);
+    return data;
   },
 
-  async deleteActivity(eventId: number, activityId: number): Promise<void> {
-    const eventActivities = mockActivitiesDB[eventId];
-    if (!eventActivities) return;
-    mockActivitiesDB[eventId] = eventActivities.filter(a => a.id !== activityId);
+  async delete(id: number): Promise<void> {
+    const { error } = await supabase.from('atividades').delete().eq('id', id);
+    if (error) throw new Error(error.message);
   },
 };

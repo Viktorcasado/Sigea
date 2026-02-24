@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useUser } from '@/src/contexts/UserContext';
 import { Activity, Event } from '@/src/types';
-import { ActivityRepositoryMock } from '@/src/repositories/ActivityRepository';
-import { mockEvents } from '@/src/data/mock'; // Assuming event data is here
+import { ActivityRepository } from '@/src/repositories/ActivityRepository';
+import { EventRepository } from '@/src/repositories/EventRepository';
+
 import { ArrowLeft, PlusCircle, Settings } from 'lucide-react';
 
 export default function SchedulePage() {
@@ -15,9 +16,11 @@ export default function SchedulePage() {
 
   useEffect(() => {
     if (!eventId) return;
-    const foundEvent = mockEvents.find(e => e.id === Number(eventId));
-    setEvent(foundEvent || null);
-    ActivityRepositoryMock.listByEvent(eventId).then(data => {
+    const eventIdNum = parseInt(eventId, 10);
+    if (isNaN(eventIdNum)) return;
+
+    EventRepository.findById(eventIdNum).then(setEvent);
+    ActivityRepository.listByEvent(eventIdNum).then(data => {
       const sorted = [...data].sort((a, b) => new Date(a.data + 'T' + a.hora_inicio).getTime() - new Date(b.data + 'T' + b.hora_inicio).getTime());
       setActivities(sorted);
     });

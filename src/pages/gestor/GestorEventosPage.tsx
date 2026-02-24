@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { mockEvents } from '@/src/data/mock';
+import { useState, useEffect } from 'react';
+import { EventRepository } from '@/src/repositories/EventRepository';
+
 import { Event } from '@/src/types';
 import { Link } from 'react-router-dom';
 import { MoreVertical, Edit, Trash2, Eye } from 'lucide-react';
@@ -24,7 +25,11 @@ const StatusBadge = ({ status }: { status: Event['status'] }) => {
 };
 
 export default function GestorEventosPage() {
-  const [events, setEvents] = useState<Event[]>(mockEvents);
+  const [events, setEvents] = useState<Event[]>([]);
+
+  useEffect(() => {
+    EventRepository.listAll().then(setEvents);
+  }, []);
 
   return (
     <div className="space-y-6">
