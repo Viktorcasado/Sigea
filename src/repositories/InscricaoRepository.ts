@@ -14,6 +14,19 @@ export const InscricaoRepository = {
     return data?.status || null;
   },
 
+  async listByUser(userId: string): Promise<Inscricao[]> {
+    const { data, error } = await supabase
+      .from('event_registrations')
+      .select('*')
+      .eq('user_id', userId);
+    
+    if (error) {
+      console.error('Erro ao listar inscrições:', error);
+      throw error;
+    }
+    return data || [];
+  },
+
   async create(inscricaoData: { user_id: string; event_id: string }): Promise<Inscricao> {
     const { data, error } = await supabase
       .from('event_registrations')
@@ -25,7 +38,10 @@ export const InscricaoRepository = {
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Erro ao criar inscrição:', error);
+      throw error;
+    }
     return data;
   },
 
@@ -36,6 +52,9 @@ export const InscricaoRepository = {
       .eq('event_id', eventId)
       .eq('user_id', userId);
     
-    if (error) throw error;
+    if (error) {
+      console.error('Erro ao cancelar inscrição:', error);
+      throw error;
+    }
   }
 };
