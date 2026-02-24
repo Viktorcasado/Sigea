@@ -1,52 +1,44 @@
-"use client";
-
-import { supabase } from '@/src/integrations/supabase/client';
+import { supabase } from '@/src/services/supabase';
+import { Presenca } from '@/src/types';
+import { ActivityRepository } from './ActivityRepository';
 
 export const PresencaRepository = {
-  async listByAtividade(activityId: string) {
-    const { data, error } = await supabase
-      .from('activity_registrations')
-      .select('*, profiles(full_name)')
-      .eq('activity_id', activityId);
-
-    if (error) throw error;
-    return data;
+  async listByAtividade(activityId: number): Promise<Presenca[]> {
+    const { data, error } = await supabase.from('presencas').select('*').eq('activity_id', activityId);
+    if (error) throw new Error(error.message);
+    return data || [];
   },
 
-  async setPresenca(activityId: string, userId: string, attended: boolean): Promise<void> {
-    const { error } = await supabase
-      .from('activity_registrations')
-      .upsert({
-        activity_id: activityId,
-        user_id: userId,
-        attended: attended,
-      }, { onConflict: 'activity_id,user_id' });
-
-    if (error) throw error;
+  async setPresenca(presencaData: Omit<Presenca, 'id' | 'created_at'>[]): Promise<void> {
+    const { error } = await supabase.from('presencas').upsert(presencaData, { onConflict: 'activity_id,user_id' });
+    if (error) throw new Error(error.message);
   },
 
-  async listByUser(userId: string) {
-    const { data, error } = await supabase
-      .from('activity_registrations')
-      .select('*, activities(*)')
+  async listByUser(userId: string): Promise<Presenca[]> {
+    const { data, error } = await supabase.from('presencas').select('*').eq('user_id', userId);
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async calcularCargaHoraria(eventId: number, userId: string): Promise<number> {
+    const { data: presencas, error: presencasError } = await supabase
+      .from('presencas')
+      .select('*')
       .eq('user_id', userId)
-      .eq('attended', true);
+      .eq('presente', true);
 
-    if (error) throw error;
-    return data;
-  },
+    if (presencasError) throw new Error(presencasError.message);
+    if (!presencas) return 0;
 
-  async calcularCargaHorariaTotal(userId: string): Promise<number> {
-    const { data, error } = await supabase
-      .from('activity_registrations')
-      .select('activities(hours)')
-      .eq('user_id', userId)
-      .eq('attended', true);
-
-    if (error) return 0;
+    const atividadesDoEvento = await ActivityRepository.listByEvent(eventId);
     
-    return data.reduce((acc, curr: any) => {
-      return acc + (curr.activities?.hours || 0);
-    }, 0);
+    let totalMinutos = 0;
+    presencas.forEach(presenca => {
+      const atividade = atividadesDoEvento.find(a => a.id === presenca.activity_id);
+      if (atividade && atividade.carga_horaria_minutos) {
+        totalMinutos += atividade.carga_horaria_minutos;
+      }
+    });
+    return totalMinutos;
   },
 };

@@ -1,34 +1,27 @@
-"use client";
-
-import { supabase } from '@/src/integrations/supabase/client';
+import { supabase } from '@/src/services/supabase';
+import { Vinculo, VinculoStatus } from '@/src/types';
 
 export const VinculoRepository = {
-  async listPendentes() {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_type', 'servidor')
-      .eq('is_organizer', false);
+  async listByStatus(status: VinculoStatus): Promise<Vinculo[]> {
+    const { data, error } = await supabase.from('vinculos').select('*').eq('status', status);
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
 
-    if (error) throw error;
+  async updateStatus(vinculoId: number, status: VinculoStatus): Promise<Vinculo> {
+    const { data, error } = await supabase
+      .from('vinculos')
+      .update({ status })
+      .eq('id', vinculoId)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
     return data;
   },
 
-  async aprovarVinculo(profileId: string): Promise<void> {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ is_organizer: true })
-      .eq('id', profileId);
-
-    if (error) throw error;
+  async create(vinculoData: Omit<Vinculo, 'id' | 'created_at'>): Promise<Vinculo> {
+    const { data, error } = await supabase.from('vinculos').insert(vinculoData).select().single();
+    if (error) throw new Error(error.message);
+    return data;
   },
-
-  async rejeitarVinculo(profileId: string): Promise<void> {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ user_type: 'comunidade_externa' })
-      .eq('id', profileId);
-
-    if (error) throw error;
-  }
 };

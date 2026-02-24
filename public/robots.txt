@@ -1,6 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /gestor/
-Disallow: /perfil/
-
-Sitemap: https://sigea.ifal.edu.br/sitemap.xml

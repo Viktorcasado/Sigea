@@ -1,49 +1,27 @@
-"use client";
-
+import { supabase } from '@/src/services/supabase';
 import { Activity } from '@/src/types';
-import { supabase } from '@/src/integrations/supabase/client';
 
 export const ActivityRepository = {
-  async listByEvent(eventId: string): Promise<Activity[]> {
-    const { data, error } = await supabase
-      .from('activities')
-      .select('*')
-      .eq('event_id', eventId)
-      .order('start_time', { ascending: true });
-
-    if (error) throw error;
+  async listByEvent(eventId: number): Promise<Activity[]> {
+    const { data, error } = await supabase.from('atividades').select('*').eq('event_id', eventId);
+    if (error) throw new Error(error.message);
     return data || [];
   },
 
-  async createActivity(activity: Omit<Activity, 'id' | 'created_at'>): Promise<Activity> {
-    const { data, error } = await supabase
-      .from('activities')
-      .insert(activity)
-      .select()
-      .single();
-
-    if (error) throw error;
+  async create(activityData: Omit<Activity, 'id'>): Promise<Activity> {
+    const { data, error } = await supabase.from('atividades').insert(activityData).select().single();
+    if (error) throw new Error(error.message);
     return data;
   },
 
-  async updateActivity(id: string, updates: Partial<Activity>): Promise<Activity> {
-    const { data, error } = await supabase
-      .from('activities')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
+  async update(id: number, activityData: Partial<Omit<Activity, 'id'>>): Promise<Activity> {
+    const { data, error } = await supabase.from('atividades').update(activityData).eq('id', id).select().single();
+    if (error) throw new Error(error.message);
     return data;
   },
 
-  async deleteActivity(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('activities')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
-  }
+  async delete(id: number): Promise<void> {
+    const { error } = await supabase.from('atividades').delete().eq('id', id);
+    if (error) throw new Error(error.message);
+  },
 };

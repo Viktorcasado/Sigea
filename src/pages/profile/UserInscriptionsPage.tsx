@@ -1,88 +1,26 @@
-"use client";
-
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '@/src/contexts/UserContext';
-import { useToast } from '@/src/contexts/ToastContext';
-import { Inscricao } from '@/src/types';
-import { supabase } from '@/src/integrations/supabase/client';
-import { ArrowLeft, Calendar, MapPin, XCircle, Loader2 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Inscricao, Event } from '@/src/types';
+import { InscricaoRepository } from '@/src/repositories/InscricaoRepository';
+import { EventRepository } from '@/src/repositories/EventRepository';
+
+import { ArrowLeft, Calendar } from 'lucide-react';
 
 export default function UserInscriptionsPage() {
-  const { user, loading: userLoading } = useUser();
-  const { showToast } = useToast();
+  const { user } = useUser();
   const [inscriptions, setInscriptions] = useState<Inscricao[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchInscriptions = useCallback(async () => {
-    if (!user) return;
-    
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('event_registrations')
-        .select(`
-          *,
-          events (*)
-        `)
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      const formatted: Inscricao[] = (data || []).map(reg => ({
-        id: reg.id,
-        eventoId: reg.event_id,
-        userId: reg.user_id,
-        status: reg.status,
-        createdAt: new Date(reg.registered_at),
-        event: reg.events ? {
-          id: reg.events.id,
-          titulo: reg.events.title,
-          dataInicio: new Date(reg.events.date),
-          campus: reg.events.campus || '',
-          instituicao: 'IFAL',
-          local: reg.events.location || '',
-          descricao: reg.events.description || '',
-          modalidade: 'Presencial',
-          status: 'publicado',
-          carga_horaria: reg.events.workload || 0
-        } : undefined
-      }));
-      setInscriptions(formatted);
-    } catch (err) {
-      console.error("Erro ao buscar inscrições:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.id]);
+  const [events, setEvents] = useState<Event[]>([]);
 
   useEffect(() => {
-    if (!userLoading) {
-      if (user) {
-        fetchInscriptions();
-      } else {
-        setLoading(false);
-      }
+    if (user) {
+      InscricaoRepository.listByUser(user.id).then(userInscriptions => {
+        setInscriptions(userInscriptions);
+        const subscribedEventIds = userInscriptions.map(i => i.event_id);
+        EventRepository.listByIds(subscribedEventIds).then(setEvents);
+      });
     }
-  }, [user?.id, userLoading, fetchInscriptions]);
-
-  const handleCancel = async (eventId: string) => {
-    if (!user || !window.confirm('Deseja realmente cancelar esta inscrição?')) return;
-
-    const { error } = await supabase
-      .from('event_registrations')
-      .delete()
-      .eq('event_id', eventId)
-      .eq('user_id', user.id);
-
-    if (!error) {
-      setInscriptions(prev => prev.filter(i => i.eventoId !== eventId));
-      showToast('Inscrição cancelada com sucesso.');
-    } else {
-      showToast('Erro ao cancelar inscrição.', 'error');
-    }
-  };
+  }, [user]);
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
@@ -91,52 +29,25 @@ export default function UserInscriptionsPage() {
         Voltar para o Perfil
       </Link>
 
-      <h1 className="text-3xl font-bold text-gray-900">Minhas Inscrições</h1>
-      <p className="text-gray-500 mt-1">Eventos que você confirmou participação</p>
+      <h1 className="text-3xl font-bold text-gray-900">Meus Eventos Inscritos</h1>
 
-      {loading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
-        </div>
-      ) : inscriptions.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-3xl shadow-sm border border-gray-100 mt-8">
-            <Calendar className="w-16 h-16 mx-auto text-gray-300" />
+      {events.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-2xl shadow-lg mt-8">
+            <Calendar className="w-16 h-16 mx-auto text-gray-400" />
             <h2 className="mt-4 text-xl font-semibold text-gray-700">Nenhuma inscrição encontrada</h2>
-            <Link to="/explorar" className="mt-6 inline-block bg-indigo-600 text-white font-bold px-6 py-2.5 rounded-xl">
+            <p className="mt-1 text-gray-500">Você ainda não se inscreveu em nenhum evento.</p>
+            <Link to="/explorar" className="mt-6 inline-block bg-indigo-600 text-white font-semibold px-6 py-2.5 rounded-lg">
                 Explorar Eventos
             </Link>
         </div>
       ) : (
         <div className="mt-8 space-y-4">
-          {inscriptions.map((reg, index) => (
-            <motion.div
-              key={reg.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4"
-            >
-              <Link to={`/evento/${reg.eventoId}`} className="flex-1">
-                <h3 className="font-bold text-xl text-gray-900">{reg.event?.titulo}</h3>
-                <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="w-4 h-4" />
-                    {reg.event?.dataInicio.toLocaleDateString('pt-BR')}
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <MapPin className="w-4 h-4" />
-                    {reg.event?.campus}
-                  </div>
-                </div>
-              </Link>
-              <button 
-                onClick={() => handleCancel(reg.eventoId)}
-                className="p-3 text-red-500 hover:bg-red-50 rounded-xl transition-colors"
-                title="Cancelar Inscrição"
-              >
-                <XCircle className="w-6 h-6" />
-              </button>
-            </motion.div>
+          {events.map(event => (
+            <Link to={`/evento/${event.id}`} key={event.id} className="block bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+              <h3 className="font-semibold text-lg text-gray-800">{event.titulo}</h3>
+              <p className="text-sm text-gray-500">{event.instituicao} - {event.campus}</p>
+              <p className="text-sm text-gray-600 mt-1">{new Date(event.data_inicio).toLocaleDateString('pt-BR')}</p>
+            </Link>
           ))}
         </div>
       )}

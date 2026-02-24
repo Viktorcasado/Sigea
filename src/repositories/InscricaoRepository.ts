@@ -1,92 +1,52 @@
-"use client";
-
-import { Inscricao, Event } from '@/src/types';
-import { supabase } from '@/src/integrations/supabase/client';
+import { supabase } from '@/src/services/supabase';
+import { Inscricao } from '@/src/types';
 
 export const InscricaoRepository = {
-  async getStatus(eventId: string, userId: string): Promise<'inscrito' | 'cancelado' | null> {
+  async getStatus(eventId: number, userId: string): Promise<string | null> {
     const { data, error } = await supabase
-      .from('event_registrations')
+      .from('inscricoes')
       .select('status')
       .eq('event_id', eventId)
       .eq('user_id', userId)
-      .maybeSingle();
-
+      .single();
     if (error) return null;
-    return data ? (data.status as any) : null;
+    return data?.status || null;
   },
 
-  async listByEvento(eventId: string): Promise<Inscricao[]> {
-    const { data, error } = await supabase
-      .from('event_registrations')
-      .select('*, profiles(full_name, email)')
-      .eq('event_id', eventId);
-
-    if (error) throw error;
-    return data.map(reg => ({
-      id: reg.id,
-      eventoId: reg.event_id,
-      userId: reg.user_id,
-      status: reg.status,
-      createdAt: new Date(reg.registered_at),
-    }));
+  async listByEvento(eventId: number): Promise<Inscricao[]> {
+    const { data, error } = await supabase.from('inscricoes').select('*').eq('event_id', eventId);
+    if (error) throw new Error(error.message);
+    return data || [];
   },
 
   async listByUser(userId: string): Promise<Inscricao[]> {
-    const { data, error } = await supabase
-      .from('event_registrations')
-      .select('*, events(*)')
-      .eq('user_id', userId);
-
-    if (error) throw error;
-    return data.map(reg => ({
-      id: reg.id,
-      eventoId: reg.event_id,
-      userId: reg.user_id,
-      status: reg.status,
-      createdAt: new Date(reg.registered_at),
-      event: reg.events ? {
-        id: reg.events.id,
-        titulo: reg.events.title,
-        dataInicio: new Date(reg.events.date),
-        campus: reg.events.campus,
-        instituicao: 'IFAL',
-        status: 'publicado',
-        carga_horaria: reg.events.workload || 0
-      } as any : undefined
-    }));
+    const { data, error } = await supabase.from('inscricoes').select('*').eq('user_id', userId);
+    if (error) throw new Error(error.message);
+    return data || [];
   },
 
-  async createInscricao(eventId: string, userId: string): Promise<void> {
-    const { error } = await supabase
-      .from('event_registrations')
-      .insert({
-        event_id: eventId,
-        user_id: userId,
-        status: 'confirmada',
-        registered_at: new Date().toISOString()
-      });
-
-    if (error) throw error;
+  async create(inscricaoData: Omit<Inscricao, 'id' | 'created_at'>): Promise<Inscricao> {
+    const { data, error } = await supabase.from('inscricoes').insert(inscricaoData).select().single();
+    if (error) throw new Error(error.message);
+    return data;
   },
 
-  async cancelInscricao(eventId: string, userId: string): Promise<void> {
+  async cancel(eventId: number, userId: string): Promise<void> {
     const { error } = await supabase
-      .from('event_registrations')
-      .delete()
+      .from('inscricoes')
+      .update({ status: 'cancelada' })
       .eq('event_id', eventId)
       .eq('user_id', userId);
-
-    if (error) throw error;
+    if (error) throw new Error(error.message);
   },
 
-  async countByEvento(eventId: string): Promise<number> {
+  async countByEvento(eventId: number): Promise<number> {
     const { count, error } = await supabase
-      .from('event_registrations')
+      .from('inscricoes')
       .select('*', { count: 'exact', head: true })
-      .eq('event_id', eventId);
-
-    if (error) return 0;
+      .eq('event_id', eventId)
+      .eq('status', 'confirmada');
+    if (error) throw new Error(error.message);
     return count || 0;
   },
 };

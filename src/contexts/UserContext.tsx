@@ -1,163 +1,124 @@
-"use client";
-
-import { createContext, useState, useContext, ReactNode, FC, useEffect, useCallback } from 'react';
-import { User, UserStatus } from '@/src/types';
-import { supabase } from '@/src/integrations/supabase/client';
-import { User as SupabaseUser, Session } from '@supabase/supabase-js';
+import { createContext, useState, useContext, ReactNode, FC, useEffect } from 'react';
+import { User } from '@/src/types';
+import { supabase, supabaseError } from '@/src/services/supabase';
+import { AuthChangeEvent, Session, User as SupabaseUser } from '@supabase/supabase-js';
 
 interface UserContextType {
   user: User | null;
-  session: Session | null;
   login: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, metadata: any) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
-  updateProfile: (updates: Partial<User>) => Promise<void>;
   loading: boolean;
+  refreshUser: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
-const deriveStatus = (userType: string | null, isOrganizer: boolean): UserStatus => {
-  if (isOrganizer) return 'gestor';
-  if (userType === 'aluno' || userType === 'servidor') return 'ativo_vinculado';
-  return 'ativo_comunidade';
-};
-
 export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = useCallback(async (supabaseUser: SupabaseUser) => {
+  const fetchCurrentProfile = async (supabaseUser: SupabaseUser) => {
+    if (!supabase) return null;
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', supabaseUser.id)
-        .maybeSingle();
-      
-      if (error) throw error;
+        .single();
 
-      const basicUser: User = {
-        id: supabaseUser.id,
-        nome: profile?.full_name || supabaseUser.user_metadata?.full_name || 'Usuário',
-        email: supabaseUser.email || '',
-        avatar_url: profile?.avatar_url || supabaseUser.user_metadata?.avatar_url || '',
-        perfil: profile?.user_type || 'comunidade_externa',
-        status: deriveStatus(profile?.user_type, profile?.is_organizer || false),
-        is_organizer: profile?.is_organizer || false,
-        username: supabaseUser.email?.split('@')[0] || 'user',
-        campus: profile?.campus || '',
-        matricula: profile?.registration_number || ''
-      };
-
-      setUser(basicUser);
-    } catch (err) {
-      console.error("[UserContext] Erro ao buscar perfil:", err);
-      setUser({
-        id: supabaseUser.id,
-        nome: supabaseUser.user_metadata?.full_name || 'Usuário',
-        email: supabaseUser.email || '',
-        perfil: 'comunidade_externa',
-        status: 'ativo_comunidade',
-        is_organizer: false
-      } as User);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
-        if (initialSession) {
-          setSession(initialSession);
-          await fetchProfile(initialSession.user);
-        } else {
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error("[UserContext] Erro na inicialização:", error);
-        setLoading(false);
+      if (error) {
+        console.error('Erro ao buscar perfil:', error);
+        return null;
       }
-    };
-
-    initAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      if (currentSession) {
-        setSession(currentSession);
-        await fetchProfile(currentSession.user);
-      } else {
-        setSession(null);
-        setUser(null);
-        setLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [fetchProfile]);
-
-  const login = async (email: string, password: string) => {
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      setLoading(false);
-      throw error;
+      return profile as User;
+    } catch (error) {
+      console.error('Erro inesperado ao buscar perfil:', error);
+      return null;
     }
   };
 
-  const signUp = async (email: string, password: string, metadata: any) => {
-    setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: metadata }
-    });
-    if (error) {
-      setLoading(false);
-      throw error;
+  const refreshUser = async () => {
+    if (!supabase) return;
+    const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+    if (supabaseUser) {
+      const profile = await fetchCurrentProfile(supabaseUser);
+      setUser(profile);
     }
+  };
+
+  useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
+    const handleAuthChange = async (event: AuthChangeEvent, session: Session | null) => {
+      const supabaseUser = session?.user ?? null;
+      if (supabaseUser) {
+        const profile = await fetchCurrentProfile(supabaseUser);
+        setUser(profile);
+        if (['SIGNED_IN', 'TOKEN_REFRESHED'].includes(event)) {
+          await upsertProfile(supabaseUser);
+        }
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthChange);
+
+    // Fetch initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleAuthChange('INITIAL_SESSION', session);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    if (!supabase) throw new Error('Supabase client não inicializado.');
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
   };
 
   const loginWithGoogle = async () => {
-    // Corrigido para incluir o hash /#/ para que o HashRouter capture a rota no retorno
-    await supabase.auth.signInWithOAuth({ 
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/#/auth/callback` }
-    });
+    if (!supabase) throw new Error('Supabase client não inicializado.');
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) throw error;
   };
 
   const logout = async () => {
-    setLoading(true);
-    try {
-      await supabase.auth.signOut();
-    } finally {
-      setUser(null);
-      setSession(null);
-      setLoading(false);
+    if (!supabase) throw new Error('Supabase client não inicializado.');
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    setUser(null);
+  };
+
+  
+
+  const upsertProfile = async (supabaseUser: SupabaseUser) => {
+    if (!supabaseUser || !supabase) return;
+
+    const { error } = await supabase
+      .from('profiles')
+      .upsert({
+        id: supabaseUser.id,
+        email: supabaseUser.email,
+        nome: supabaseUser.user_metadata.full_name || supabaseUser.email,
+        status: 'ativo_comunidade',
+      }, { onConflict: 'id' });
+
+    if (error) {
+      console.error("Erro no upsert do perfil: ", error);
     }
   };
 
-  const updateProfile = async (updates: Partial<User>) => {
-    if (!user) return;
-    const { error } = await supabase.from('profiles').update({
-      full_name: updates.nome,
-      campus: updates.campus,
-      registration_number: updates.matricula,
-      avatar_url: updates.avatar_url,
-      user_type: updates.perfil,
-      is_organizer: updates.is_organizer
-    }).eq('id', user.id);
-    
-    if (error) throw error;
-    setUser(prev => prev ? { ...prev, ...updates } : null);
-  };
-
   return (
-    <UserContext.Provider value={{ user, session, login, signUp, loginWithGoogle, logout, updateProfile, loading }}>
+    <UserContext.Provider value={{ user, login, loginWithGoogle, logout, loading, refreshUser }}>
       {children}
     </UserContext.Provider>
   );
@@ -165,6 +126,8 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
 
 export const useUser = () => {
   const context = useContext(UserContext);
-  if (context === undefined) throw new Error('useUser must be used within a UserProvider');
+  if (context === undefined) {
+    throw new Error('useUser must be used within a UserProvider');
+  }
   return context;
 };
