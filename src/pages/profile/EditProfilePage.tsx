@@ -1,84 +1,42 @@
-"use client";
-
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useUser } from '@/src/contexts/UserContext';
+import { updateProfile } from '@/src/services/profileService';
 import { useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Save, User, Upload, Loader2 } from 'lucide-react';
-import { supabase } from '@/src/integrations/supabase/client';
+import { ArrowLeft } from 'lucide-react';
 
 export default function EditProfilePage() {
-  const { user, updateProfile } = useUser();
+  const { user, refreshUser } = useUser();
   const navigate = useNavigate();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  
   const [nome, setNome] = useState('');
-  const [username, setUsername] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState('');
+  const [telefone, setTelefone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
       setNome(user.nome || '');
-      setUsername(user.username || '');
-      setAvatarUrl(user.avatar_url || '');
+      setTelefone(user.telefone || '');
     }
   }, [user]);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-
-    if (!file.type.startsWith('image/')) {
-      setError('Por favor, selecione uma imagem válida.');
-      return;
-    }
-
-    setIsUploading(true);
-    setError(null);
-
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('profiles')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('profiles')
-        .getPublicUrl(filePath);
-
-      setAvatarUrl(publicUrl);
-    } catch (err: any) {
-      setError('Erro ao subir imagem. Verifique as permissões.');
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nome) {
-      setError('O nome é obrigatório.');
+    if (!user || !nome) {
+      setError('O nome completo é obrigatório.');
       return;
     }
-
     setIsLoading(true);
+    setSuccess(null);
     setError(null);
+
     try {
-      await updateProfile({ 
-        nome, 
-        avatar_url: avatarUrl 
-      });
-      alert('Perfil atualizado com sucesso!');
-      navigate('/perfil');
-    } catch (err: any) {
-      setError('Erro ao atualizar perfil. Tente novamente.');
+      await updateProfile(user.id, { nome, telefone });
+      await refreshUser();
+      setSuccess('Dados atualizados com sucesso!');
+    } catch (err) {
+      setError('Ocorreu um erro ao atualizar os dados.');
+      console.error(err);
     } finally {
       setIsLoading(false);
     }
@@ -91,76 +49,28 @@ export default function EditProfilePage() {
         Voltar para o Perfil
       </Link>
 
-      <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
-        <div className="flex items-center gap-4 mb-8">
-          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
-            <User className="w-6 h-6" />
+      <div className="bg-white p-6 rounded-2xl shadow-lg">
+        <h1 className="text-2xl font-bold text-gray-900">Editar Dados do Perfil</h1>
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          <div>
+            <label htmlFor="nome" className="block text-sm font-medium text-gray-700">Nome completo</label>
+            <input type="text" id="nome" value={nome} onChange={(e) => setNome(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Editar Perfil</h1>
-            <p className="text-gray-500 text-sm">Personalize sua identidade no SIGEA.</p>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700">E-mail</label>
+            <input type="email" id="email" value={user?.email || ''} readOnly className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-500" />
           </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="flex flex-col items-center mb-6">
-            <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-              {avatarUrl ? (
-                <img 
-                  src={avatarUrl} 
-                  alt="Preview" 
-                  className="w-32 h-32 rounded-full object-cover border-4 border-indigo-50 shadow-md"
-                />
-              ) : (
-                <div className="w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 border-4 border-dashed border-gray-200">
-                  <User className="w-16 h-16" />
-                </div>
-              )}
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 rounded-full">
-                <Upload className="w-8 h-8 text-white" />
-              </div>
-              {isUploading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/60 rounded-full">
-                  <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-                </div>
-              )}
-            </div>
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
+          <div>
+            <label htmlFor="telefone" className="block text-sm font-medium text-gray-700">Telefone (opcional)</label>
+            <input type="tel" id="telefone" value={telefone} onChange={(e) => setTelefone(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" />
           </div>
 
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Nome de Usuário</label>
-              <input 
-                type="text" 
-                value={username} 
-                disabled
-                className="w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl text-gray-500 cursor-not-allowed"
-              />
-              <p className="text-[10px] text-gray-400 mt-1">O nome de usuário é gerado automaticamente.</p>
-            </div>
+          {success && <p className="text-sm text-green-600">{success}</p>}
+          {error && <p className="text-sm text-red-600">{error}</p>}
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Nome Completo</label>
-              <input 
-                type="text" 
-                value={nome} 
-                onChange={(e) => setNome(e.target.value)} 
-                required 
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-              />
-            </div>
-          </div>
-
-          {error && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-xl text-center">{error}</div>}
-
-          <div className="flex gap-4 pt-4">
-            <button type="button" onClick={() => navigate('/perfil')} className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl">Cancelar</button>
-            <button type="submit" disabled={isLoading || isUploading} className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl flex items-center justify-center gap-2">
-              {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-              Salvar Alterações
-            </button>
-          </div>
+          <button type="submit" disabled={isLoading} className="w-full px-4 py-2.5 text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400">
+            {isLoading ? 'Salvando...' : 'Salvar'}
+          </button>
         </form>
       </div>
     </div>

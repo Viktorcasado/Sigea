@@ -1,22 +1,15 @@
 import { useUser } from '@/src/contexts/UserContext';
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { Navigate, Outlet } from 'react-router-dom';
 
-const ProtectedRoute = () => {
-  const { session, loading } = useUser();
-  const location = useLocation();
+interface ProtectedRouteProps {
+  allowedProfiles: Array<'aluno' | 'servidor' | 'gestor' | 'admin' | 'comunidade_externa'>;
+}
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
-      </div>
-    );
-  }
+const ProtectedRoute = ({ allowedProfiles }: ProtectedRouteProps) => {
+  const { user } = useUser();
 
-  // Se não houver sessão, manda para o login
-  if (!session) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+  if (!user || !allowedProfiles.includes(user.perfil)) {
+    return <Navigate to="/acesso-restrito" replace />;
   }
 
   return <Outlet />;

@@ -1,54 +1,29 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 @import "tailwindcss";
 
-@theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-}
-
 @layer base {
-  html {
-    @apply text-gray-900 antialiased bg-gray-50;
-    /* Garante que o app ocupe toda a altura, incluindo áreas seguras */
-    height: -webkit-fill-available;
-  }
-  
   body {
-    @apply min-h-screen;
-    min-height: -webkit-fill-available;
-    /* Previne scroll elástico indesejado no mobile */
-    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
-@layer components {
-  .glass-panel {
-    @apply bg-white border border-gray-200 shadow-sm;
-  }
-  
-  .glass-card {
-    @apply bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300;
-  }
-
-  /* Utilitário para padding inferior considerando a barra do sistema mobile */
-  .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom, 16px);
-  }
+.font-sans {
+    font-family: 'Inter', sans-serif;
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-    width: 6px;
+/* Custom scrollbar for horizontal lists */
+.overflow-x-auto::-webkit-scrollbar {
+    height: 4px;
 }
 
-::-webkit-scrollbar-track {
+.overflow-x-auto::-webkit-scrollbar-track {
     background: transparent;
 }
 
-::-webkit-scrollbar-thumb {
-    @apply bg-gray-300 rounded-full;
+.overflow-x-auto::-webkit-scrollbar-thumb {
+    background-color: #d1d5db; /* gray-400 */
+    border-radius: 20px;
 }
 
-.no-scrollbar::-webkit-scrollbar {
-    display: none;
-}

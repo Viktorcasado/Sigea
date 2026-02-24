@@ -1,20 +1,18 @@
-export type UserProfile = 'aluno' | 'servidor' | 'gestor' | 'comunidade_externa' | 'admin';
+export type UserProfile = 'aluno' | 'servidor' | 'gestor' | 'comunidade_externa';
 export type UserStatus = 'ativo_comunidade' | 'ativo_vinculado' | 'gestor' | 'admin';
 
 export interface User {
   id: string;
-  nome: string; // Nome completo (full_name no DB)
-  username?: string; // Nome de usuário/apelido
+  nome: string;
   email: string;
-  avatar_url?: string;
+  telefone?: string;
+  cpf: string;
   matricula?: string;
   siape?: string;
-  cpf?: string;
   instituicao?: EventInstitution;
   campus?: string;
   perfil: UserProfile;
   status: UserStatus;
-  is_organizer: boolean;
 }
 
 export type EventStatus = 'rascunho' | 'publicado' | 'encerrado';
@@ -24,82 +22,81 @@ export type EventInstitution = 'IFAL' | 'UFAL' | 'Comunidade';
 export interface Event {
   id: string;
   titulo: string;
-  descricao: string;
+  instituicao: EventInstitution;
+  campus: string;
   dataInicio: Date;
   dataFim?: Date;
-  local: string;
-  campus: string;
-  instituicao: EventInstitution;
   modalidade: EventModality;
-  status: EventStatus;
   vagas?: number;
-  carga_horaria: number;
-  organizer_id?: string;
-  image_url?: string;
+  local: string;
+  descricao: string;
+  status: EventStatus;
 }
 
-export interface CertificateTemplate {
+export type ActivityType = 'palestra' | 'oficina' | 'minicurso' | 'mesa_redonda' | 'seminario' | 'outro';
+
+export interface Inscricao {
   id: string;
-  event_id: string;
-  template_file_path: string;
-  template_type: 'pdf' | 'image';
-  mapping: CertificateMapping;
+  eventoId: string;
+  userId: string;
+  status: 'inscrito' | 'cancelado';
+  createdAt: Date;
 }
 
-export interface CertificateMapping {
-  fields: {
-    [key: string]: {
-      x: number;
-      y: number;
-      fontSize?: number;
-      color?: string;
-      size?: number;
-    };
-  };
-}
+export type VinculoStatus = 'pendente' | 'aprovado' | 'rejeitado';
 
-export interface Certificate {
+export interface Vinculo {
   id: string;
   userId: string;
-  eventoId: string;
-  codigo: string;
-  dataEmissao: Date;
-  carga_horaria: number;
-  url_pdf?: string;
-  event?: Event;
+  userNome: string;
+  userEmail: string;
+  instituicao: EventInstitution;
+  campus: string;
+  perfilSolicitado: UserProfile;
+  matriculaOuSiape: string;
+  status: VinculoStatus;
+  createdAt: Date;
+}
+
+export interface Presenca {
+  id: string;
+  atividadeId: string;
+  userId: string;
+  presente: boolean;
+  marcadoPor: string; // userId of manager
+  createdAt: Date;
 }
 
 export interface Activity {
   id: string;
-  event_id: string;
-  title: string;
-  description: string;
-  type: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  location: string;
-  hours: number;
+  eventoId: string;
+  titulo: string;
+  tipo: ActivityType;
+  data: string; // YYYY-MM-DD
+  horaInicio: string; // HH:mm
+  horaFim: string; // HH:mm
+  localOuLink: string;
+  responsavel?: string;
+  cargaHorariaMinutos: number;
+}
+
+export interface Certificate {
+  id: string;
+  eventId: string;
+  codigo: string;
+  cargaHoraria: number;
+  dataEmissao: Date;
 }
 
 export type NotificationType = 'evento' | 'certificado' | 'sistema' | 'vinculo';
 
 export interface Notification {
   id: string;
-  userId: string | null;
+  userId: string;
   titulo: string;
   mensagem: string;
   tipo: NotificationType;
   lida: boolean;
   createdAt: Date;
-  referenciaId?: string;
-}
-
-export interface Inscricao {
-  id: string;
-  eventoId: string;
-  userId: string;
-  status: string;
-  createdAt: Date;
-  event?: Event;
+  referenciaId?: string; // ID do evento ou certificado
 }

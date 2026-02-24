@@ -1,34 +1,33 @@
-"use client";
+import { Vinculo, VinculoStatus } from '@/src/types';
+import { mockUsers } from '@/src/data/mock';
 
-import { supabase } from '@/src/integrations/supabase/client';
+const mockVinculosDB: Vinculo[] = [
+  {
+    id: 'vnc01',
+    userId: 'user003',
+    userNome: mockUsers.find(u => u.id === 'user003')?.nome || '',
+    userEmail: mockUsers.find(u => u.id === 'user003')?.email || '',
+    instituicao: 'IFAL',
+    campus: 'Maceió',
+    perfilSolicitado: 'aluno',
+    matriculaOuSiape: '2023987654',
+    status: 'pendente',
+    createdAt: new Date(),
+  }
+];
 
-export const VinculoRepository = {
-  async listPendentes() {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_type', 'servidor')
-      .eq('is_organizer', false);
-
-    if (error) throw error;
-    return data;
+export const VinculoRepositoryMock = {
+  async listByStatus(status: VinculoStatus): Promise<Vinculo[]> {
+    return mockVinculosDB.filter(v => v.status === status);
   },
 
-  async aprovarVinculo(profileId: string): Promise<void> {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ is_organizer: true })
-      .eq('id', profileId);
-
-    if (error) throw error;
-  },
-
-  async rejeitarVinculo(profileId: string): Promise<void> {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ user_type: 'comunidade_externa' })
-      .eq('id', profileId);
-
-    if (error) throw error;
+  async updateStatus(vinculoId: string, status: VinculoStatus): Promise<Vinculo | null> {
+    const index = mockVinculosDB.findIndex(v => v.id === vinculoId);
+    if (index > -1) {
+      mockVinculosDB[index].status = status;
+      // Aqui, em uma implementação real, você também atualizaria o status do usuário no DB de usuários.
+      return mockVinculosDB[index];
+    }
+    return null;
   }
 };
