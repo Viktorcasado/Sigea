@@ -1,7 +1,7 @@
-import { createContext, useState, useContext, ReactNode, FC, useEffect } from 'react';
+import { createContext, useState, useContext, ReactNode, FC, useEffect, useCallback } from 'react';
 import { User } from '@/src/types';
 import { supabase } from '@/src/services/supabase';
-import { AuthChangeEvent, Session, User as SupabaseUser } from '@supabase/supabase-js';
+import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 
 interface UserContextType {
   user: User | null;
@@ -18,7 +18,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchCurrentProfile = async (supabaseUser: SupabaseUser) => {
+  const fetchCurrentProfile = useCallback(async (supabaseUser: SupabaseUser) => {
     if (!supabase) return null;
     try {
       const { data: profile, error } = await supabase
@@ -28,11 +28,14 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
         .maybeSingle();
 
       if (error) {
-        console.error('Erro ao buscar perfil:', error);
+        console.error('[UserContext] Erro ao buscar perfil:', error);
         return null;
       }
 
-      if (!profile) return null;
+      if (!profile) {
+        console.warn('[UserContext] Perfil não encontrado para o usuário:', supabaseUser.id);
+        return null;
+      }
       
       return {
         id: profile.id,
@@ -45,73 +48,90 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
         matricula: profile.registration_number
       } as User;
     } catch (error) {
-      console.error('Erro inesperado ao buscar perfil:', error);
+      console.error('[UserContext] Erro inesperado ao buscar perfil:', error);
       return null;
     }
-  };
+  }, []);
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     if (!supabase) return;
     try {
       const { data: { user: supabaseUser } } = await supabase.auth.getUser();
       if (supabaseUser) {
         const profile = await fetchCurrentProfile(supabaseUser);
         setUser(profile);
+      } else {
+        setUser(null);
       }
     } catch (err) {
-      console.error("Erro ao atualizar usuário:", err);
+      console.error("[UserContext] Erro ao atualizar usuário:", err);
     }
-  };
+  }, [fetchCurrentProfile]);
 
   useEffect(() => {
-    if (!supabase) {
-      setLoading(false);
-      return;
-    }
+    let mounted = true;
 
-    const handleAuthChange = async (event: AuthChangeEvent, session: Session | null) => {
+    const initAuth = async () => {
+      if (!supabase) {
+        if (mounted) setLoading(false);
+        return;
+      }
+
       try {
-        const supabaseUser = session?.user ?? null;
-        if (supabaseUser) {
-          const profile = await fetchCurrentProfile(supabaseUser);
+        // 1. Tenta pegar a sessão atual imediatamente
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user && mounted) {
+          const profile = await fetchCurrentProfile(session.user);
           setUser(profile);
-        } else {
-          setUser(null);
         }
       } catch (err) {
-        console.error("Erro na mudança de auth:", err);
-        setUser(null);
+        console.error("[UserContext] Erro na inicialização:", err);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
-    };
 
-    // Configura o listener de mudanças de auth
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthChange);
-
-    // Busca a sessão inicial
-    supabase.auth.getSession()
-      .then(({ data: { session } }) => {
-        handleAuthChange('INITIAL_SESSION', session);
-      })
-      .catch((err) => {
-        console.error("Erro ao buscar sessão inicial:", err);
-        setLoading(false);
+      // 2. Configura o listener para mudanças futuras
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log(`[UserContext] Auth event: ${event}`);
+        
+        if (session?.user) {
+          const profile = await fetchCurrentProfile(session.user);
+          if (mounted) setUser(profile);
+        } else {
+          if (mounted) setUser(null);
+        }
+        
+        if (mounted) setLoading(false);
       });
 
-    // Timeout de segurança para garantir que o loading saia após 5 segundos
-    const timeout = setTimeout(() => setLoading(false), 5000);
+      return () => {
+        subscription.unsubscribe();
+      };
+    };
+
+    const cleanup = initAuth();
+
+    // Timeout de segurança (fail-safe)
+    const timeout = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn("[UserContext] Loading timeout atingido. Forçando encerramento.");
+        setLoading(false);
+      }
+    }, 6000);
 
     return () => {
-      subscription.unsubscribe();
+      mounted = false;
       clearTimeout(timeout);
+      cleanup.then(unsubscribe => unsubscribe?.());
     };
-  }, []);
+  }, [fetchCurrentProfile]);
 
   const login = async (email: string, password: string) => {
     if (!supabase) throw new Error('Supabase client não inicializado.');
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
+    // O onAuthStateChange cuidará de atualizar o estado do usuário
   };
 
   const loginWithGoogle = async () => {

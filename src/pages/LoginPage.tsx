@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useUser } from '@/src/contexts/UserContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2 } from 'lucide-react';
@@ -11,41 +11,55 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const { login, loginWithGoogle } = useUser();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { login, loginWithGoogle, user, loading: authLoading } = useUser();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
 
+  // Se o usuário já estiver logado, redireciona para a home
+  useEffect(() => {
+    if (user && !authLoading) {
+      navigate('/');
+    }
+  }, [user, authLoading, navigate]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     if (password.length < 6) {
       setError('A senha deve ter no mínimo 6 caracteres.');
       return;
     }
-    setIsLoading(true);
+
+    setIsSubmitting(true);
     setError(null);
+
     try {
       await login(email, password);
-      navigate('/');
+      // O redirecionamento acontecerá via useEffect quando o estado do usuário mudar
     } catch (err: any) {
+      setIsSubmitting(false);
       if (err.message?.includes('Invalid login credentials')) {
         setError('E-mail ou senha inválidos.');
+      } else if (err.message?.includes('Email not confirmed')) {
+        setError('Por favor, confirme seu e-mail antes de entrar.');
       } else {
         setError('Ocorreu um erro ao tentar entrar. Verifique sua conexão.');
+        console.error(err);
       }
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
-    setIsLoading(true);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     setError(null);
     try {
       await loginWithGoogle();
     } catch (err: any) {
+      setIsSubmitting(false);
       setError('Ocorreu um erro ao tentar login com o Google.');
-      setIsLoading(false);
     }
   };
 
@@ -95,8 +109,9 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  disabled={isSubmitting}
                   placeholder="exemplo@email.com"
-                  className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition-all"
+                  className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition-all disabled:opacity-50"
                 />
               </div>
             </div>
@@ -117,8 +132,9 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  disabled={isSubmitting}
                   placeholder="••••••••"
-                  className="w-full pl-12 pr-12 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition-all"
+                  className="w-full pl-12 pr-12 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition-all disabled:opacity-50"
                 />
                 <button 
                   type="button" 
@@ -132,10 +148,10 @@ export default function LoginPage() {
 
             <button 
               type="submit" 
-              disabled={isLoading || !!supabaseError} 
+              disabled={isSubmitting || !!supabaseError} 
               className="w-full flex items-center justify-center gap-2 px-4 py-4 font-bold text-white bg-indigo-600 rounded-2xl hover:bg-indigo-700 disabled:bg-gray-300 transition-all shadow-lg shadow-indigo-100 active:scale-[0.98]"
             >
-              {isLoading ? (
+              {isSubmitting ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <>
@@ -155,7 +171,7 @@ export default function LoginPage() {
 
           <button 
             onClick={handleGoogleLogin} 
-            disabled={isLoading || !!supabaseError} 
+            disabled={isSubmitting || !!supabaseError} 
             className="w-full flex items-center justify-center gap-3 px-4 py-4 font-bold text-gray-700 bg-white border border-gray-200 rounded-2xl hover:bg-gray-50 disabled:opacity-50 transition-all active:scale-[0.98]"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
