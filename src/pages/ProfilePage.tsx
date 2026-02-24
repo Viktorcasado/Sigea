@@ -10,11 +10,8 @@ import {
   Shield, 
   LogOut, 
   Calendar, 
-  Clock, 
   PlusCircle, 
   LayoutDashboard, 
-  FileBarChart, 
-  ShieldCheck, 
   FileQuestion, 
   Info, 
   BookOpen,
@@ -125,13 +122,13 @@ export default function ProfilePage() {
 
       <MenuSection title="Minha Conta">
         <MenuItem to="/perfil/editar" icon={UserIcon} label="Editar Perfil" color="text-indigo-500" />
-        <MenuItem to="/perfil/instituicao-campus" icon={Building} label="Vínculo Institucional" color="text-blue-500" />
+        <MenuItem to="/perfil/instituicao-campus" icon={Building} label="Vinculo Institucional" color="text-blue-500" />
         <MenuItem to="/perfil/documentos" icon={FileText} label="Meus Documentos" color="text-orange-500" />
-        <MenuItem to="/perfil/seguranca" icon={Shield} label="Segurança e Senha" color="text-red-500" />
+        <MenuItem to="/perfil/seguranca" icon={Shield} label="Senha e Segurança" color="text-red-500" />
       </MenuSection>
 
       <MenuSection title="Atividades">
-        <MenuItem to="/perfil/eventos-inscritos" icon={Calendar} label="Eventos Inscritos" color="text-green-500" />
+        <MenuItem to="/perfil/eventos-inscritos" icon={Calendar} label="Eventos e Inscrições" color="text-green-500" />
         <MenuItem to="/notificacoes" icon={Bell} label="Notificações" color="text-yellow-500" />
         
         {['servidor', 'gestor', 'admin'].includes(user.perfil) && (
