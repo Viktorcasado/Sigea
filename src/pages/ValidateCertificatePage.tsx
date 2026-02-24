@@ -1,7 +1,9 @@
-import { useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Search, CheckCircle, XCircle, QrCode } from 'lucide-react';
+"use client";
 
+import { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Search, CheckCircle, XCircle, QrCode, Loader2 } from 'lucide-react';
+import { CertificateRepository } from '@/src/repositories/CertificateRepository';
 import { Certificate, Event } from '@/src/types';
 
 interface ValidationResult {
@@ -12,13 +14,33 @@ interface ValidationResult {
 export default function ValidateCertificatePage() {
   const [searchParams] = useSearchParams();
   const [code, setCode] = useState(searchParams.get('codigo') || '');
-  const [validationStatus, setValidationStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
+  const [validationStatus, setValidationStatus] = useState<'idle' | 'loading' | 'valid' | 'invalid'>('idle');
   const [result, setResult] = useState<ValidationResult | null>(null);
 
+  useEffect(() => {
+    if (searchParams.get('codigo')) {
+      handleValidation();
+    }
+  }, []);
+
   const handleValidation = async () => {
-    // TODO: Implement CertificateRepository
+    if (!code.trim()) return;
+
+    setValidationStatus('loading');
     setResult(null);
-    setValidationStatus('invalid');
+
+    try {
+      const data = await CertificateRepository.validate(code.trim());
+      if (data) {
+        setResult(data);
+        setValidationStatus('valid');
+      } else {
+        setValidationStatus('invalid');
+      }
+    } catch (error) {
+      console.error(error);
+      setValidationStatus('invalid');
+    }
   };
 
   return (
@@ -37,46 +59,64 @@ export default function ValidateCertificatePage() {
                     type="text"
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
-                    placeholder="SIGEA-XXXX-YY"
+                    placeholder="Ex: SIGEA-0001-26"
                     className="flex-grow px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
                 />
                 <button 
                     onClick={handleValidation}
-                    className="flex items-center justify-center gap-2 bg-indigo-600 text-white font-semibold px-6 py-2.5 rounded-lg hover:bg-indigo-700 transition-colors"
+                    disabled={validationStatus === 'loading'}
+                    className="flex items-center justify-center gap-2 bg-indigo-600 text-white font-semibold px-6 py-2.5 rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-indigo-400"
                 >
-                    <Search className="w-5 h-5" />
+                    {validationStatus === 'loading' ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Search className="w-5 h-5" />
+                    )}
                     Validar
                 </button>
             </div>
-             <button className="w-full mt-2 flex items-center justify-center gap-2 bg-gray-100 text-gray-700 font-semibold px-4 py-2.5 rounded-lg hover:bg-gray-200 transition-colors">
-                <QrCode className="w-5 h-5" />
-                Ler QR Code (em breve)
-            </button>
         </div>
 
         {validationStatus === 'valid' && result && (
-            <div className="mt-6 bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg">
+            <div className="mt-6 bg-green-50 border-l-4 border-green-500 p-6 rounded-r-lg shadow-sm">
                 <div className="flex items-center">
                     <CheckCircle className="w-6 h-6 text-green-600 mr-3" />
                     <h2 className="text-lg font-bold text-green-800">Certificado Válido</h2>
                 </div>
-                <div className="mt-4 pl-9 text-gray-700 space-y-2">
-                    <p><strong>Evento:</strong> {result.event.titulo}</p>
-                    <p><strong>Instituição:</strong> {result.event.instituicao} - {result.event.campus}</p>
-                    <p><strong>Carga Horária:</strong> {result.certificate.carga_horaria_minutos ? Math.floor(result.certificate.carga_horaria_minutos / 60) : 'N/A'}h</p>
-                    <p><strong>Data de Emissão:</strong> {new Date(result.certificate.data_emissao).toLocaleDateString('pt-BR')}</p>
-                    <p><strong>Código:</strong> {result.certificate.codigo_validacao}</p>
+                <div className="mt-4 pl-9 text-gray-700 space-y-3">
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Evento</p>
+                      <p className="font-semibold">{result.event.titulo}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Instituição / Campus</p>
+                      <p>{result.event.instituicao} - {result.event.campus}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Carga Horária</p>
+                        <p>{Math.floor(result.certificate.carga_horaria_minutos / 60)}h</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Data de Emissão</p>
+                        <p>{new Date(result.certificate.data_emissao).toLocaleDateString('pt-BR')}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Código de Autenticidade</p>
+                      <p className="font-mono text-sm bg-white/50 p-1 rounded border border-green-100 inline-block">{result.certificate.codigo_validacao}</p>
+                    </div>
                 </div>
             </div>
         )}
 
         {validationStatus === 'invalid' && (
-            <div className="mt-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
+            <div className="mt-6 bg-red-50 border-l-4 border-red-500 p-6 rounded-r-lg shadow-sm">
                 <div className="flex items-center">
                     <XCircle className="w-6 h-6 text-red-600 mr-3" />
                     <h2 className="text-lg font-bold text-red-800">Certificado Não Encontrado</h2>
                 </div>
-                <p className="mt-2 pl-9 text-red-700">O código inserido não corresponde a nenhum certificado em nosso sistema. Verifique o código e tente novamente.</p>
+                <p className="mt-2 pl-9 text-red-700">O código inserido não corresponde a nenhum certificado em nosso sistema ou é inválido. Verifique o código e tente novamente.</p>
             </div>
         )}
     </div>
