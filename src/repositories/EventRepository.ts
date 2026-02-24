@@ -3,38 +3,73 @@ import { Event } from '@/src/types';
 
 export const EventRepository = {
   async listAll(): Promise<Event[]> {
-    const { data, error } = await supabase.from('eventos').select('*');
-    if (error) throw new Error(error.message);
-    return data || [];
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .order('date', { ascending: true });
+    
+    if (error) throw error;
+    
+    return (data || []).map(item => ({
+      id: item.id,
+      titulo: item.title,
+      descricao: item.description,
+      data_inicio: item.date,
+      data_fim: item.date, // Ajustar se houver campo de fim
+      local: item.location,
+      status: 'publicado', // Mapear conforme lógica de negócio
+      modalidade: 'Presencial', // Mapear conforme lógica de negócio
+      campus: item.campus,
+      instituicao: 'IFAL', // Valor padrão ou vindo do banco
+      vagas: 0
+    }));
   },
 
-  async findById(id: number): Promise<Event | null> {
-    const { data, error } = await supabase.from('eventos').select('*').eq('id', id).single();
-    if (error) throw new Error(error.message);
-    return data;
+  async findById(id: string | number): Promise<Event | null> {
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) return null;
+    
+    return {
+      id: data.id,
+      titulo: data.title,
+      descricao: data.description,
+      data_inicio: data.date,
+      data_fim: data.date,
+      local: data.location,
+      status: 'publicado',
+      modalidade: 'Presencial',
+      campus: data.campus,
+      instituicao: 'IFAL',
+      vagas: 0
+    };
   },
 
-  async create(eventData: Omit<Event, 'id'>): Promise<Event> {
-    const { data, error } = await supabase.from('eventos').insert(eventData).select().single();
-    if (error) throw new Error(error.message);
-    return data;
-  },
-
-  async update(id: number, eventData: Partial<Omit<Event, 'id'>>): Promise<Event> {
-    const { data, error } = await supabase.from('eventos').update(eventData).eq('id', id).select().single();
-    if (error) throw new Error(error.message);
-    return data;
-  },
-
-  async listByIds(ids: number[]): Promise<Event[]> {
+  async listByIds(ids: string[]): Promise<Event[]> {
     if (ids.length === 0) return [];
-    const { data, error } = await supabase.from('eventos').select('*').in('id', ids);
-    if (error) throw new Error(error.message);
-    return data || [];
-  },
-
-  async delete(id: number): Promise<void> {
-    const { error } = await supabase.from('eventos').delete().eq('id', id);
-    if (error) throw new Error(error.message);
-  },
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .in('id', ids);
+    
+    if (error) throw error;
+    
+    return (data || []).map(item => ({
+      id: item.id,
+      titulo: item.title,
+      descricao: item.description,
+      data_inicio: item.date,
+      data_fim: item.date,
+      local: item.location,
+      status: 'publicado',
+      modalidade: 'Presencial',
+      campus: item.campus,
+      instituicao: 'IFAL',
+      vagas: 0
+    }));
+  }
 };
