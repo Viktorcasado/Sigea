@@ -3,7 +3,6 @@ import { Certificate, Event } from '@/src/types';
 
 export const CertificateRepository = {
   async validate(code: string): Promise<{ certificate: Certificate; event: Event } | null> {
-    // Usando a função RPC definida no banco de dados para validação
     const { data, error } = await supabase.rpc('validate_certificate', { p_codigo: code });
 
     if (error || !data || data.length === 0) {
@@ -13,16 +12,15 @@ export const CertificateRepository = {
 
     const result = data[0];
 
-    // Mapeando o resultado para os tipos da aplicação
     const certificate: Certificate = {
       id: result.codigo_certificado,
       evento_titulo: result.evento_titulo,
-      nome_participante: '', // O nome viria de uma consulta adicional se necessário
+      nome_participante: '', 
       data_emissao: result.emitido_em,
       codigo_validacao: result.codigo_certificado,
       carga_horaria_minutos: result.carga_horaria_total * 60,
       evento: {
-        id: 0, // ID fictício pois o RPC retorna dados consolidados
+        id: 0, 
         titulo: result.evento_titulo,
         descricao: '',
         instituicao: result.instituicao_sigla,
@@ -30,6 +28,8 @@ export const CertificateRepository = {
         data_inicio: result.emitido_em,
         data_fim: result.emitido_em,
         local: result.campus_nome,
+        status: 'publicado',
+        modalidade: 'Presencial'
       }
     };
 
@@ -44,7 +44,7 @@ export const CertificateRepository = {
       .from('certificados')
       .select(`
         *,
-        eventos (
+        eventos:evento_id (
           titulo,
           instituicao,
           campus
@@ -56,12 +56,40 @@ export const CertificateRepository = {
 
     return (data || []).map(item => ({
       id: item.id,
-      evento_titulo: item.eventos.titulo,
-      nome_participante: '', // Nome do usuário logado
+      evento_titulo: item.eventos?.titulo || 'Evento Desconhecido',
+      nome_participante: '', 
       data_emissao: item.emitido_em,
       codigo_validacao: item.codigo_certificado,
-      carga_horaria_minutos: item.carga_horaria * 60,
+      carga_horaria_minutos: (item.carga_horaria || 0) * 60,
       evento: item.eventos
     }));
+  },
+
+  async findByEventAndUser(eventId: string | number, userId: string): Promise<Certificate | null> {
+    const { data, error } = await supabase
+      .from('certificados')
+      .select(`
+        *,
+        eventos:evento_id (
+          titulo,
+          instituicao,
+          campus
+        )
+      `)
+      .eq('evento_id', eventId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    return {
+      id: data.id,
+      evento_titulo: data.eventos?.titulo || 'Evento Desconhecido',
+      nome_participante: '',
+      data_emissao: data.emitido_em,
+      codigo_validacao: data.codigo_certificado,
+      carga_horaria_minutos: (data.carga_horaria || 0) * 60,
+      evento: data.eventos
+    };
   }
 };

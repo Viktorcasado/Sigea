@@ -29,6 +29,7 @@ import TermsPage from './pages/system/TermsPage';
 import AboutPage from './pages/system/AboutPage';
 import NotificationsPage from './pages/NotificationsPage';
 import CreateEventPage from './pages/CreateEventPage';
+import EventDetailPage from './pages/EventDetailPage';
 import RestrictedAccessPage from './pages/RestrictedAccessPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import SchedulePage from './pages/event/SchedulePage';
@@ -100,7 +101,7 @@ function AppRoutes() {
               <Route path="auditoria" element={<GestorAuditoriaPage />} />
             </Route>
           </Route>
-          <Route path="/evento/:id" element={<div className='bg-gray-50 min-h-screen'><div className='max-w-4xl mx-auto p-4'><HomePage /></div></div>} />
+          <Route path="/evento/:id" element={<div className='bg-gray-50 min-h-screen'><div className='max-w-4xl mx-auto p-4'><EventDetailPage /></div></div>} />
           <Route path="/notificacoes" element={<NotificationsPage />} />
           <Route path="/validar-certificado" element={<ValidateCertificatePage />} />
           <Route path="/acesso-restrito" element={<RestrictedAccessPage />} />
