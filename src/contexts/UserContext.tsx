@@ -1,7 +1,7 @@
 import { createContext, useState, useContext, ReactNode, FC, useEffect, useCallback } from 'react';
 import { User } from '@/src/types';
 import { supabase } from '@/src/services/supabase';
-import { Session, User as SupabaseUser } from '@supabase/supabase-js';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface UserContextType {
   user: User | null;
@@ -32,10 +32,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
         return null;
       }
 
-      if (!profile) {
-        console.warn('[UserContext] Perfil não encontrado para o usuário:', supabaseUser.id);
-        return null;
-      }
+      if (!profile) return null;
       
       return {
         id: profile.id,
@@ -48,7 +45,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
         matricula: profile.registration_number
       } as User;
     } catch (error) {
-      console.error('[UserContext] Erro inesperado ao buscar perfil:', error);
+      console.error('[UserContext] Erro inesperado:', error);
       return null;
     }
   }, []);
@@ -64,7 +61,7 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
         setUser(null);
       }
     } catch (err) {
-      console.error("[UserContext] Erro ao atualizar usuário:", err);
+      console.error("[UserContext] Erro ao atualizar:", err);
     }
   }, [fetchCurrentProfile]);
 
@@ -72,15 +69,13 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
     let mounted = true;
 
     const initAuth = async () => {
-      if (!supabase) {
-        if (mounted) setLoading(false);
-        return;
-      }
-
       try {
-        // 1. Tenta pegar a sessão atual imediatamente
+        if (!supabase) {
+          if (mounted) setLoading(false);
+          return;
+        }
+
         const { data: { session } } = await supabase.auth.getSession();
-        
         if (session?.user && mounted) {
           const profile = await fetchCurrentProfile(session.user);
           setUser(profile);
@@ -91,17 +86,13 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
         if (mounted) setLoading(false);
       }
 
-      // 2. Configura o listener para mudanças futuras
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-        console.log(`[UserContext] Auth event: ${event}`);
-        
         if (session?.user) {
           const profile = await fetchCurrentProfile(session.user);
           if (mounted) setUser(profile);
         } else {
           if (mounted) setUser(null);
         }
-        
         if (mounted) setLoading(false);
       });
 
@@ -110,45 +101,36 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
       };
     };
 
-    const cleanup = initAuth();
+    initAuth();
 
-    // Timeout de segurança (fail-safe)
     const timeout = setTimeout(() => {
-      if (mounted && loading) {
-        console.warn("[UserContext] Loading timeout atingido. Forçando encerramento.");
-        setLoading(false);
-      }
-    }, 6000);
+      if (mounted && loading) setLoading(false);
+    }, 5000);
 
     return () => {
       mounted = false;
       clearTimeout(timeout);
-      cleanup.then(unsubscribe => unsubscribe?.());
     };
   }, [fetchCurrentProfile]);
 
   const login = async (email: string, password: string) => {
-    if (!supabase) throw new Error('Supabase client não inicializado.');
+    if (!supabase) throw new Error('Supabase não inicializado.');
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    // O onAuthStateChange cuidará de atualizar o estado do usuário
   };
 
   const loginWithGoogle = async () => {
-    if (!supabase) throw new Error('Supabase client não inicializado.');
+    if (!supabase) throw new Error('Supabase não inicializado.');
     const { error } = await supabase.auth.signInWithOAuth({ 
       provider: 'google',
-      options: {
-        redirectTo: window.location.origin
-      }
+      options: { redirectTo: window.location.origin }
     });
     if (error) throw error;
   };
 
   const logout = async () => {
-    if (!supabase) throw new Error('Supabase client não inicializado.');
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    if (!supabase) throw new Error('Supabase não inicializado.');
+    await supabase.auth.signOut();
     setUser(null);
   };
 
@@ -161,8 +143,6 @@ export const UserProvider: FC<{children: ReactNode}> = ({ children }) => {
 
 export const useUser = () => {
   const context = useContext(UserContext);
-  if (context === undefined) {
-    throw new Error('useUser must be used within a UserProvider');
-  }
+  if (context === undefined) throw new Error('useUser deve ser usado dentro de UserProvider');
   return context;
 };
