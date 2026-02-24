@@ -17,42 +17,31 @@ const StatusBadge = ({ status }: { status: Event['status'] }) => {
     'encerrado': { icon: <Clock className="w-3 h-3 mr-1.5" />, color: 'bg-gray-100 text-gray-800', text: 'Encerrado' },
   };
   const currentStatus = statusInfo[status] || { icon: null, color: 'bg-gray-100 text-gray-800', text: 'Indefinido' };
-  return <div className={`text-xs inline-flex items-center font-semibold px-2.5 py-0.5 rounded-full ${currentStatus.color}`}>{currentStatus.icon}{currentStatus.text}</div>;
+  return <div className={`text-[10px] inline-flex items-center font-black uppercase tracking-wider px-2.5 py-1 rounded-full ${currentStatus.color}`}>{currentStatus.icon}{currentStatus.text}</div>;
 };
-
-const ModalityIcon = ({ modality }: { modality: Event['modalidade'] }) => {
-    if (!modality) return null;
-    const icons = {
-        'Presencial': <Footprints className="w-4 h-4 mr-1.5 text-gray-400" />,
-        'Online': <Tv className="w-4 h-4 mr-1.5 text-gray-400" />,
-        'Híbrido': <><Footprints className="w-3 h-3 mr-0.5 text-gray-400" /><Tv className="w-3 h-3 mr-1.5 text-gray-400" /></>,
-    }
-    return <div className="flex items-center">{icons[modality]} {modality}</div>;
-}
 
 export default function EventCard({ event, variant = 'horizontal', isFavorite, onToggleFavorite }: EventCardProps) {
   const handleFavoriteClick = (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent navigation when clicking the favorite button
+    e.preventDefault();
     e.stopPropagation();
     onToggleFavorite?.(event.id.toString());
   };
 
   if (variant === 'list') {
     return (
-        <div className="block bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300">
+        <div className="block bg-white p-5 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300">
             <div className="flex justify-between items-start gap-4">
                 <Link to={`/evento/${event.id}`} className='flex-grow'>
-                    <h3 className="font-bold text-gray-800 text-lg">{event.titulo}</h3>
-                    <p className="text-sm text-gray-500 mt-1.5">{event.instituicao} - {event.campus}</p>
-                    <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-gray-600 mt-3">
-                        <div className="flex items-center"><Calendar className="w-4 h-4 mr-1.5 text-gray-400" /> {new Date(event.data_inicio).toLocaleDateString('pt-BR')}</div>
-                        <ModalityIcon modality={event.modalidade} />
-                        {event.vagas != null && event.vagas > 0 && <div className="flex items-center"><Users className="w-4 h-4 mr-1.5 text-gray-400" /> {event.vagas} vagas</div>}
+                    <h3 className="font-black text-gray-900 text-lg tracking-tight leading-tight">{event.titulo}</h3>
+                    <p className="text-sm font-bold text-gray-400 mt-1">{event.instituicao} • {event.campus}</p>
+                    <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm font-medium text-gray-500 mt-4">
+                        <div className="flex items-center"><Calendar className="w-4 h-4 mr-2 text-indigo-500" /> {new Date(event.data_inicio).toLocaleDateString('pt-BR')}</div>
+                        <div className="flex items-center"><MapPin className="w-4 h-4 mr-2 text-indigo-500" /> {event.modalidade}</div>
                     </div>
                 </Link>
                 {onToggleFavorite && (
-                    <button onClick={handleFavoriteClick} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-                        <Star className={`w-5 h-5 ${isFavorite ? 'text-yellow-500 fill-current' : 'text-gray-400'}`} />
+                    <button onClick={handleFavoriteClick} className="p-3 rounded-2xl bg-gray-50 hover:bg-yellow-50 transition-colors group">
+                        <Star className={`w-5 h-5 ${isFavorite ? 'text-yellow-500 fill-current' : 'text-gray-300 group-hover:text-yellow-400'}`} />
                     </button>
                 )}
             </div>
@@ -62,32 +51,45 @@ export default function EventCard({ event, variant = 'horizontal', isFavorite, o
 
   if (variant === 'vertical') {
     return (
-      <Link to={`/evento/${event.id}`} className="block bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 mb-3">
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className="font-semibold text-gray-800">{event.titulo}</h3>
-            <p className="text-sm text-gray-500 mt-1">{event.campus}</p>
+      <Link to={`/evento/${event.id}`} className="block bg-white p-5 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center">
+                <Calendar className="w-6 h-6 text-indigo-600" />
+            </div>
+            <div>
+                <h3 className="font-bold text-gray-900 leading-tight">{event.titulo}</h3>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-0.5">{event.campus}</p>
+            </div>
           </div>
-          {event.status && <StatusBadge status={event.status} />}
+          <ChevronRight className="w-5 h-5 text-gray-300" />
         </div>
       </Link>
     );
   }
 
-  // Horizontal variant (for HomePage)
   return (
-    <Link to={`/evento/${event.id}`} className="flex-shrink-0 w-64 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 mr-4">
-      <div className="p-4">
-        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center mb-3">
-          <Calendar className="w-6 h-6 text-gray-500" />
+    <Link to={`/evento/${event.id}`} className="flex-shrink-0 w-72 bg-white rounded-[2.5rem] shadow-sm border border-gray-100 hover:shadow-xl hover:shadow-indigo-500/5 transition-all duration-300 mr-4 overflow-hidden group">
+      <div className="p-6">
+        <div className="flex justify-between items-start mb-6">
+            <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex flex-col items-center justify-center text-white shadow-lg shadow-indigo-100 group-hover:scale-110 transition-transform">
+                <span className="text-[10px] font-black uppercase tracking-widest opacity-80">{new Date(event.data_inicio).toLocaleDateString('pt-BR', { month: 'short' })}</span>
+                <span className="text-xl font-black leading-none">{new Date(event.data_inicio).getDate()}</span>
+            </div>
+            <StatusBadge status={event.status} />
         </div>
-        <p className="text-sm font-semibold text-indigo-600">{new Date(event.data_inicio).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()}</p>
-        <h3 className="font-semibold text-gray-800 mt-1">{event.titulo}</h3>
-        <p className="text-sm text-gray-500 flex items-center mt-2">
-          <MapPin className="w-4 h-4 mr-1.5 text-gray-400" />
+        <h3 className="font-black text-gray-900 text-xl tracking-tight leading-tight mb-2">{event.titulo}</h3>
+        <p className="text-sm font-bold text-gray-400 flex items-center">
+          <MapPin className="w-4 h-4 mr-1.5 text-indigo-500" />
           {event.campus}
         </p>
+      </div>
+      <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+        <span className="text-xs font-black text-indigo-600 uppercase tracking-widest">Ver Detalhes</span>
+        <ArrowRight className="w-4 h-4 text-indigo-600 group-hover:translate-x-1 transition-transform" />
       </div>
     </Link>
   );
 }
+
+import { ArrowRight, ChevronRight } from 'lucide-react';

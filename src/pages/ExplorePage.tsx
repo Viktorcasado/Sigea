@@ -1,20 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, SlidersHorizontal, Star, X } from 'lucide-react';
+import { Search, SlidersHorizontal, Star, X, Loader2 } from 'lucide-react';
 import { EventRepository } from '@/src/repositories/EventRepository';
 import { Event } from '@/src/types';
 import EventCard from '@/src/components/EventCard';
-
-// Debounce function
-function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-
-  return (...args: Parameters<F>): void => {
-    if (timeout) {
-      clearTimeout(timeout);
-    }
-    timeout = setTimeout(() => func(...args), waitFor);
-  };
-}
+import { motion } from 'motion/react';
 
 export default function ExplorePage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,93 +14,81 @@ export default function ExplorePage() {
 
   useEffect(() => {
     EventRepository.listAll()
-      .then(data => {
-        setEvents(data);
-      })
-      .catch(err => {
-        console.error('Failed to fetch events:', err);
-        // Here you might want to set an error state to show in the UI
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+      .then(setEvents)
+      .finally(() => setIsLoading(false));
   }, []);
 
   const toggleFavorite = (eventId: string) => {
-    const numericEventId = parseInt(eventId, 10);
-    if (isNaN(numericEventId)) return;
+    const numericId = parseInt(eventId, 10);
     setFavorites(prev => {
-      const newFavs = new Set(prev);
-      if (newFavs.has(numericEventId)) {
-        newFavs.delete(numericEventId);
-      } else {
-        newFavs.add(numericEventId);
-      }
-      return newFavs;
+      const next = new Set(prev);
+      if (next.has(numericId)) next.delete(numericId);
+      else next.add(numericId);
+      return next;
     });
   };
 
   const filteredEvents = useMemo(() => {
     let filtered = events;
-
-    if (showFavorites) {
-      filtered = filtered.filter(event => favorites.has(event.id));
-    }
-
+    if (showFavorites) filtered = filtered.filter(e => favorites.has(Number(e.id)));
     if (searchTerm) {
-      const lowercasedTerm = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        event =>
-          event.titulo.toLowerCase().includes(lowercasedTerm) ||
-          event.campus.toLowerCase().includes(lowercasedTerm) ||
-          event.modalidade.toLowerCase().includes(lowercasedTerm)
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(e => 
+        e.titulo.toLowerCase().includes(term) || 
+        e.campus?.toLowerCase().includes(term)
       );
     }
-
     return filtered;
-  }, [searchTerm, showFavorites, favorites]);
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-  };
-  
-  const debouncedSearch = useMemo(() => debounce(handleSearchChange, 300), []);
+  }, [searchTerm, showFavorites, favorites, events]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 pb-12">
       <header>
-        <h1 className="text-3xl font-bold text-gray-900">Explorar</h1>
-        <p className="text-gray-500 mt-1">Encontre eventos no IFAL, UFAL e comunidade</p>
+        <h1 className="text-4xl font-black text-gray-900 tracking-tighter">Explorar</h1>
+        <p className="text-gray-500 font-bold mt-1">Encontre eventos no IFAL, UFAL e comunidade</p>
       </header>
 
-      <div className="sticky top-4 z-10 bg-gray-50/80 backdrop-blur-sm -mx-4 px-4 py-3">
-        <div className="flex gap-2 items-center">
+      <div className="sticky top-4 z-10 space-y-4">
+        <div className="flex gap-3">
             <div className="relative flex-grow">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
-                type="text"
-                placeholder="Buscar por nome, campus ou modalidade"
-                onChange={debouncedSearch}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                    type="text"
+                    placeholder="Buscar eventos..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 bg-white border border-gray-100 rounded-[1.5rem] shadow-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none font-bold transition-all"
                 />
             </div>
-            <button className="p-3 border border-gray-200 bg-white rounded-lg hover:bg-gray-100 transition">
-                <SlidersHorizontal className="w-5 h-5 text-gray-600" />
+            <button className="p-4 bg-white border border-gray-100 rounded-[1.5rem] shadow-sm hover:bg-gray-50 transition-all active:scale-95">
+                <SlidersHorizontal className="w-6 h-6 text-gray-700" />
             </button>
         </div>
-        <div className='mt-3'>
+        
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
             <button 
                 onClick={() => setShowFavorites(!showFavorites)}
-                className={`px-4 py-1.5 rounded-full text-sm font-semibold flex items-center transition-colors ${showFavorites ? 'bg-indigo-600 text-white' : 'bg-white border'}`}>
-                <Star className={`w-4 h-4 mr-2 ${showFavorites ? 'text-yellow-300' : 'text-gray-500'}`} />
+                className={`px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all ${
+                    showFavorites ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-white border border-gray-100 text-gray-500'
+                }`}
+            >
+                <Star className={`w-4 h-4 ${showFavorites ? 'fill-current' : ''}`} />
                 Favoritos
             </button>
+            {['Presencial', 'Online', 'Híbrido'].map(mod => (
+                <button key={mod} className="px-6 py-2.5 bg-white border border-gray-100 rounded-full text-xs font-black uppercase tracking-widest text-gray-500 hover:border-indigo-200 transition-all">
+                    {mod}
+                </button>
+            ))}
         </div>
       </div>
 
       <main>
         {isLoading ? (
-            <p>Carregando...</p> // Placeholder for skeleton loader
+            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                <Loader2 className="w-10 h-10 animate-spin mb-4" />
+                <p className="font-bold">Buscando eventos...</p>
+            </div>
         ) : filteredEvents.length > 0 ? (
           <div className="space-y-4">
             {filteredEvents.map(event => (
@@ -119,15 +96,18 @@ export default function ExplorePage() {
                 key={event.id} 
                 event={event} 
                 variant="list" 
-                isFavorite={favorites.has(event.id)}
+                isFavorite={favorites.has(Number(event.id))}
                 onToggleFavorite={toggleFavorite}
               />
             ))}
           </div>
         ) : (
-          <div className="text-center py-16">
-            <h3 className="text-xl font-semibold text-gray-700">Nenhum evento encontrado</h3>
-            <p className="text-gray-500 mt-2">Tente ajustar sua busca ou filtros.</p>
+          <div className="text-center py-20 bg-white rounded-[3rem] border border-gray-100 shadow-sm">
+            <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                <Search className="w-10 h-10 text-gray-200" />
+            </div>
+            <h3 className="text-xl font-black text-gray-900 tracking-tight">Nenhum evento encontrado</h3>
+            <p className="text-gray-500 font-bold mt-2">Tente ajustar sua busca ou filtros.</p>
           </div>
         )}
       </main>
