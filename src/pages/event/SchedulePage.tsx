@@ -4,7 +4,7 @@ import { useUser } from '@/src/contexts/UserContext';
 import { Activity, Event } from '@/src/types';
 import { ActivityRepository } from '@/src/repositories/ActivityRepository';
 import { EventRepository } from '@/src/repositories/EventRepository';
-import { ArrowLeft, PlusCircle, Settings, Calendar, Clock, MapPin, ChevronRight } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Settings, Calendar, Clock, MapPin, ChevronRight, Users } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export default function SchedulePage() {
@@ -78,14 +78,18 @@ export default function SchedulePage() {
       </header>
 
       {canManage && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-12">
           <Link to={`/evento/${eventId}/atividades/criar`} className="flex items-center justify-center gap-3 p-5 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95">
             <PlusCircle className="w-5 h-5" />
-            Adicionar Atividade
+            Atividade
+          </Link>
+          <Link to={`/evento/${eventId}/participantes`} className="flex items-center justify-center gap-3 p-5 bg-white text-gray-700 font-black rounded-2xl border border-gray-100 hover:bg-gray-50 transition-all active:scale-95">
+            <Users className="w-5 h-5 text-indigo-600" />
+            Participantes
           </Link>
           <Link to={`/evento/${eventId}/atividades`} className="flex items-center justify-center gap-3 p-5 bg-white text-gray-700 font-black rounded-2xl border border-gray-100 hover:bg-gray-50 transition-all active:scale-95">
             <Settings className="w-5 h-5" />
-            Gerenciar Atividades
+            Gerenciar
           </Link>
         </div>
       )}

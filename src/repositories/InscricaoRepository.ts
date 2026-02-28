@@ -35,8 +35,29 @@ export const InscricaoRepository = {
     return data || [];
   },
 
+  async listByEvent(eventId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('event_registrations')
+      .select(`
+        *,
+        profiles:user_id (
+          full_name,
+          campus,
+          registration_number,
+          user_type
+        )
+      `)
+      .eq('event_id', eventId)
+      .eq('status', 'confirmada');
+    
+    if (error) {
+      console.error('Erro ao listar participantes do evento:', error);
+      throw error;
+    }
+    return data || [];
+  },
+
   async create(inscricaoData: { user_id: string; event_id: string }): Promise<Inscricao> {
-    // Primeiro verificamos se já existe uma inscrição (mesmo que cancelada)
     const { data: existing } = await supabase
       .from('event_registrations')
       .select('*')
@@ -45,7 +66,6 @@ export const InscricaoRepository = {
       .maybeSingle();
 
     if (existing) {
-      // Se já existe, apenas atualizamos o status para confirmada
       const { data, error } = await supabase
         .from('event_registrations')
         .update({ status: 'confirmada' })
@@ -57,7 +77,6 @@ export const InscricaoRepository = {
       return data;
     }
 
-    // Se não existe, criamos uma nova
     const { data, error } = await supabase
       .from('event_registrations')
       .insert({
@@ -76,8 +95,6 @@ export const InscricaoRepository = {
   },
 
   async cancel(eventId: string, userId: string): Promise<void> {
-    // Em vez de deletar, vamos apenas atualizar o status para cancelada
-    // Isso é mais seguro e mantém o histórico
     const { error } = await supabase
       .from('event_registrations')
       .update({ status: 'cancelada' })
@@ -86,7 +103,6 @@ export const InscricaoRepository = {
     
     if (error) {
       console.error('Erro ao cancelar inscrição:', error);
-      // Se o update falhar (talvez por falta de política), tentamos o delete como fallback
       const { error: deleteError } = await supabase
         .from('event_registrations')
         .delete()

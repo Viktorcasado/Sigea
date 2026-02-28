@@ -39,6 +39,7 @@ import SchedulePage from './pages/event/SchedulePage';
 import ManageActivitiesPage from './pages/event/ManageActivitiesPage';
 import ActivityFormPage from './pages/event/ActivityFormPage';
 import MarkPresencePage from './pages/event/MarkPresencePage';
+import ManageParticipantsPage from './pages/event/ManageParticipantsPage';
 import { Loader2 } from 'lucide-react';
 
 export default function App() {
@@ -133,6 +134,7 @@ function AppRoutes() {
           <Route element={<ProtectedRoute allowedProfiles={['servidor', 'gestor', 'admin']} />}>
             <Route path="/evento/criar" element={<div className='bg-gray-50 min-h-screen'><CreateEventPage /></div>} />
             <Route path="/evento/:id/cronograma" element={<div className='bg-gray-50 min-h-screen'><SchedulePage /></div>} />
+            <Route path="/evento/:id/participantes" element={<div className='bg-gray-50 min-h-screen'><ManageParticipantsPage /></div>} />
             <Route path="/evento/:id/atividades" element={<div className='bg-gray-50 min-h-screen'><ManageActivitiesPage /></div>} />
             <Route path="/evento/:id/atividades/criar" element={<div className='bg-gray-50 min-h-screen'><ActivityFormPage /></div>} />
             <Route path="/evento/:id/atividades/:activityId/editar" element={<div className='bg-gray-50 min-h-screen'><ActivityFormPage /></div>} />
