@@ -15,7 +15,8 @@ import {
   FileQuestion, 
   Info, 
   BookOpen,
-  Bell
+  Bell,
+  Briefcase
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -133,8 +134,10 @@ export default function ProfilePage() {
         
         {['servidor', 'gestor', 'admin'].includes(user.perfil) && (
           <>
-            <MenuItem to="/evento/criar" icon={PlusCircle} label="Criar Novo Evento" color="text-indigo-600" />
-            <MenuItem to="/gestor/painel" icon={LayoutDashboard} label="Painel do Gestor" color="text-purple-500" />
+            <MenuItem to="/organizador/painel" icon={Briefcase} label="Painel do Organizador" color="text-indigo-600" />
+            {user.perfil !== 'servidor' && (
+              <MenuItem to="/gestor/painel" icon={LayoutDashboard} label="Painel do Gestor" color="text-purple-500" />
+            )}
           </>
         )}
       </MenuSection>

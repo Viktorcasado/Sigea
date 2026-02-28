@@ -24,6 +24,9 @@ import GestorRelatoriosPage from './pages/gestor/GestorRelatoriosPage';
 import GestorAuditoriaPage from './pages/gestor/GestorAuditoriaPage';
 import AcessoRestritoPage from './pages/gestor/AcessoRestritoPage';
 import GestorProtectedRoute from './components/GestorProtectedRoute';
+import OrganizadorLayout from './pages/organizador/OrganizadorLayout';
+import OrganizadorPainelPage from './pages/organizador/OrganizadorPainelPage';
+import OrganizadorEventosPage from './pages/organizador/OrganizadorEventosPage';
 import PoliciesPage from './pages/system/PoliciesPage';
 import TermsPage from './pages/system/TermsPage';
 import AboutPage from './pages/system/AboutPage';
@@ -93,6 +96,16 @@ function AppRoutes() {
           <Route path="/sistema/termos" element={<TermsPage />} />
           <Route path="/sistema/sobre" element={<AboutPage />} />
           <Route path="/gestor/acesso-restrito" element={<AcessoRestritoPage />} />
+          
+          {/* Rotas do Organizador */}
+          <Route element={<ProtectedRoute allowedProfiles={['servidor', 'gestor', 'admin']} />}>
+            <Route path="/organizador" element={<OrganizadorLayout />}>
+              <Route path="painel" element={<OrganizadorPainelPage />} />
+              <Route path="meus-eventos" element={<OrganizadorEventosPage />} />
+              <Route path="certificados" element={<div className="p-8 bg-white rounded-[2rem] border border-gray-100">Emissão de certificados em massa em breve.</div>} />
+            </Route>
+          </Route>
+
           <Route element={<GestorProtectedRoute />}>
             <Route path="/gestor" element={<GestorLayout />}>
               <Route path="painel" element={<PainelPage />} />
@@ -102,10 +115,12 @@ function AppRoutes() {
               <Route path="auditoria" element={<GestorAuditoriaPage />} />
             </Route>
           </Route>
+          
           <Route path="/evento/:id" element={<div className='bg-gray-50 min-h-screen'><div className='max-w-4xl mx-auto p-4'><EventDetailPage /></div></div>} />
           <Route path="/notificacoes" element={<NotificationsPage />} />
           <Route path="/validar-certificado" element={<ValidateCertificatePage />} />
           <Route path="/acesso-restrito" element={<RestrictedAccessPage />} />
+          
           <Route element={<ProtectedRoute allowedProfiles={['servidor', 'gestor', 'admin']} />}>
             <Route path="/evento/criar" element={<div className='bg-gray-50 min-h-screen'><CreateEventPage /></div>} />
             <Route path="/evento/:id/cronograma" element={<div className='bg-gray-50 min-h-screen'><SchedulePage /></div>} />
