@@ -80,24 +80,37 @@ function AppRoutes() {
         </>
       ) : (
         <>
+          {/* Rotas com Layout Principal (Sidebar + BottomBar) */}
           <Route path="/" element={<Layout />}>
             <Route index element={<HomePage />} />
             <Route path="explorar" element={<ExplorePage />} />
             <Route path="certificados" element={<CertificatesPage />} />
             <Route path="perfil" element={<ProfilePage />} />
+            
+            {/* Subpáginas do Perfil dentro do Layout */}
+            <Route path="perfil/editar" element={<EditProfilePage />} />
+            <Route path="perfil/instituicao-campus" element={<InstitutionPage />} />
+            <Route path="perfil/documentos" element={<DocumentsPage />} />
+            <Route path="perfil/seguranca" element={<SecurityPage />} />
+            <Route path="perfil/eventos-inscritos" element={<UserInscriptionsPage />} />
+            
+            {/* Outras páginas do usuário dentro do Layout */}
+            <Route path="notificacoes" element={<NotificationsPage />} />
+            <Route path="evento/:id" element={<EventDetailPage />} />
+            <Route path="validar-certificado" element={<ValidateCertificatePage />} />
+            
+            {/* Páginas de Sistema */}
+            <Route path="sistema/politicas" element={<PoliciesPage />} />
+            <Route path="sistema/termos" element={<TermsPage />} />
+            <Route path="sistema/sobre" element={<AboutPage />} />
+            
+            <Route path="acesso-restrito" element={<RestrictedAccessPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
-          <Route path="/perfil/editar" element={<EditProfilePage />} />
-          <Route path="/perfil/instituicao-campus" element={<InstitutionPage />} />
-          <Route path="/perfil/documentos" element={<DocumentsPage />} />
-          <Route path="/perfil/seguranca" element={<SecurityPage />} />
-          <Route path="/perfil/eventos-inscritos" element={<div className='bg-gray-50 min-h-screen'><UserInscriptionsPage /></div>} />
-          <Route path="/sistema/politicas" element={<PoliciesPage />} />
-          <Route path="/sistema/termos" element={<TermsPage />} />
-          <Route path="/sistema/sobre" element={<AboutPage />} />
+
+          {/* Rotas de Gestão (Layouts Próprios) */}
           <Route path="/gestor/acesso-restrito" element={<AcessoRestritoPage />} />
           
-          {/* Rotas do Organizador */}
           <Route element={<ProtectedRoute allowedProfiles={['servidor', 'gestor', 'admin']} />}>
             <Route path="/organizador" element={<OrganizadorLayout />}>
               <Route path="painel" element={<OrganizadorPainelPage />} />
@@ -116,11 +129,7 @@ function AppRoutes() {
             </Route>
           </Route>
           
-          <Route path="/evento/:id" element={<div className='bg-gray-50 min-h-screen'><div className='max-w-4xl mx-auto p-4'><EventDetailPage /></div></div>} />
-          <Route path="/notificacoes" element={<NotificationsPage />} />
-          <Route path="/validar-certificado" element={<ValidateCertificatePage />} />
-          <Route path="/acesso-restrito" element={<RestrictedAccessPage />} />
-          
+          {/* Rotas de Criação e Edição (Podem ficar fora do layout principal se necessário, ou dentro) */}
           <Route element={<ProtectedRoute allowedProfiles={['servidor', 'gestor', 'admin']} />}>
             <Route path="/evento/criar" element={<div className='bg-gray-50 min-h-screen'><CreateEventPage /></div>} />
             <Route path="/evento/:id/cronograma" element={<div className='bg-gray-50 min-h-screen'><SchedulePage /></div>} />
