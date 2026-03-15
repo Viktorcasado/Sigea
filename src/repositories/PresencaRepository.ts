@@ -1,35 +1,34 @@
-import { supabase } from '@/src/services/supabase';
 import { Presenca } from '@/src/types';
 import { ActivityRepository } from './ActivityRepository';
 
+const mockPresencas: Presenca[] = [];
+
 export const PresencaRepository = {
   async listByAtividade(activityId: number): Promise<Presenca[]> {
-    const { data, error } = await supabase.from('presencas').select('*').eq('activity_id', activityId);
-    if (error) throw new Error(error.message);
-    return data || [];
+    return mockPresencas.filter(p => p.activity_id === activityId);
   },
 
   async setPresenca(presencaData: Omit<Presenca, 'id' | 'created_at'>[]): Promise<void> {
-    const { error } = await supabase.from('presencas').upsert(presencaData, { onConflict: 'activity_id,user_id' });
-    if (error) throw new Error(error.message);
+    presencaData.forEach(p => {
+      const index = mockPresencas.findIndex(mp => mp.activity_id === p.activity_id && mp.user_id === p.user_id);
+      if (index !== -1) {
+        mockPresencas[index] = { ...mockPresencas[index], ...p };
+      } else {
+        mockPresencas.push({
+          ...p,
+          id: Math.floor(Math.random() * 1000),
+          created_at: new Date().toISOString()
+        } as Presenca);
+      }
+    });
   },
 
   async listByUser(userId: string): Promise<Presenca[]> {
-    const { data, error } = await supabase.from('presencas').select('*').eq('user_id', userId);
-    if (error) throw new Error(error.message);
-    return data || [];
+    return mockPresencas.filter(p => p.user_id === userId);
   },
 
   async calcularCargaHoraria(eventId: number, userId: string): Promise<number> {
-    const { data: presencas, error: presencasError } = await supabase
-      .from('presencas')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('presente', true);
-
-    if (presencasError) throw new Error(presencasError.message);
-    if (!presencas) return 0;
-
+    const presencas = mockPresencas.filter(p => p.user_id === userId && p.presente === true);
     const atividadesDoEvento = await ActivityRepository.listByEvent(eventId);
     
     let totalMinutos = 0;

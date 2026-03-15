@@ -40,7 +40,7 @@ export default function ProfileMenu() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl z-50 border border-gray-100">
+        <div className="absolute right-0 bottom-full mb-2 w-64 bg-white rounded-xl shadow-2xl z-50 border border-gray-100">
           <div className="p-4 border-b border-gray-100">
             <p className="font-semibold text-gray-800">{user.nome}</p>
             <p className="text-sm text-gray-500 truncate">{user.email}</p>
@@ -59,15 +59,6 @@ export default function ProfileMenu() {
               <span>Certificados</span>
             </Link>
           </nav>
-          <div className="p-2 border-t border-gray-100">
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-3 py-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-            >
-              <LogOut className="w-5 h-5" />
-              <span>Sair</span>
-            </button>
-          </div>
         </div>
       )}
     </div>

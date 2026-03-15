@@ -1,118 +1,37 @@
-import { supabase } from '@/src/services/supabase';
 import { Inscricao } from '@/src/types';
 
+const mockInscricoes: Inscricao[] = [];
+
 export const InscricaoRepository = {
-  async getStatus(eventId: string, userId: string): Promise<string | null> {
-    try {
-      const { data, error } = await supabase
-        .from('event_registrations')
-        .select('status')
-        .eq('event_id', eventId)
-        .eq('user_id', userId)
-        .maybeSingle();
-      
-      if (error) {
-        console.error('Erro ao buscar status da inscrição:', error);
-        return null;
-      }
-      return data?.status || null;
-    } catch (err) {
-      console.error('Erro inesperado ao buscar status:', err);
-      return null;
-    }
+  async getStatus(eventId: number, userId: string): Promise<string | null> {
+    const inscricao = mockInscricoes.find(i => i.event_id === eventId && i.user_id === userId);
+    return inscricao ? 'confirmada' : null;
+  },
+
+  async listByEvento(eventId: number): Promise<Inscricao[]> {
+    return mockInscricoes.filter(i => i.event_id === eventId);
   },
 
   async listByUser(userId: string): Promise<Inscricao[]> {
-    const { data, error } = await supabase
-      .from('event_registrations')
-      .select('*')
-      .eq('user_id', userId);
-    
-    if (error) {
-      console.error('Erro ao listar inscrições:', error);
-      throw error;
-    }
-    return data || [];
+    return mockInscricoes.filter(i => i.user_id === userId);
   },
 
-  async listByEvent(eventId: string): Promise<any[]> {
-    const { data, error } = await supabase
-      .from('event_registrations')
-      .select(`
-        *,
-        profiles:user_id (
-          full_name,
-          campus,
-          registration_number,
-          user_type
-        )
-      `)
-      .eq('event_id', eventId)
-      .eq('status', 'confirmada');
-    
-    if (error) {
-      console.error('Erro ao listar participantes do evento:', error);
-      throw error;
-    }
-    return data || [];
+  async create(inscricaoData: Omit<Inscricao, 'id' | 'created_at'>): Promise<Inscricao> {
+    const newInscricao: Inscricao = {
+      ...inscricaoData,
+      id: Math.floor(Math.random() * 1000),
+      created_at: new Date().toISOString()
+    };
+    mockInscricoes.push(newInscricao);
+    return newInscricao;
   },
 
-  async create(inscricaoData: { user_id: string; event_id: string }): Promise<Inscricao> {
-    const { data: existing } = await supabase
-      .from('event_registrations')
-      .select('*')
-      .eq('event_id', inscricaoData.event_id)
-      .eq('user_id', inscricaoData.user_id)
-      .maybeSingle();
-
-    if (existing) {
-      const { data, error } = await supabase
-        .from('event_registrations')
-        .update({ status: 'confirmada' })
-        .eq('id', existing.id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
-    }
-
-    const { data, error } = await supabase
-      .from('event_registrations')
-      .insert({
-        event_id: inscricaoData.event_id,
-        user_id: inscricaoData.user_id,
-        status: 'confirmada'
-      })
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Erro ao criar inscrição:', error);
-      throw error;
-    }
-    return data;
+  async cancel(eventId: number, userId: string): Promise<void> {
+    const index = mockInscricoes.findIndex(i => i.event_id === eventId && i.user_id === userId);
+    if (index !== -1) mockInscricoes.splice(index, 1);
   },
 
-  async cancel(eventId: string, userId: string): Promise<void> {
-    const { error } = await supabase
-      .from('event_registrations')
-      .update({ status: 'cancelada' })
-      .eq('event_id', eventId)
-      .eq('user_id', userId);
-    
-    if (error) {
-      console.error('Erro ao cancelar inscrição:', error);
-      const { error: deleteError } = await supabase
-        .from('event_registrations')
-        .delete()
-        .eq('event_id', eventId)
-        .eq('user_id', userId);
-        
-      if (deleteError) {
-        console.error('Erro ao deletar inscrição:', deleteError);
-        throw deleteError;
-      }
-    }
-  }
+  async countByEvento(eventId: number): Promise<number> {
+    return mockInscricoes.filter(i => i.event_id === eventId).length;
+  },
 };

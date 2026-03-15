@@ -3,7 +3,7 @@ import { Event } from '@/src/types';
 
 export const getEvents = async (): Promise<Event[]> => {
   const { data, error } = await supabase
-    .from('events')
+    .from('eventos')
     .select('*')
     .order('data_inicio', { ascending: false });
 

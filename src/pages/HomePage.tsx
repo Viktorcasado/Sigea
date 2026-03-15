@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Event } from '@/src/types';
-import { EventRepository } from '@/src/repositories/EventRepository';
+import { getEvents } from '@/src/services/eventService';
 import { Link } from 'react-router-dom';
-import { Bell, Compass, Award, PlusCircle, Loader2, Calendar as CalendarIcon, ArrowRight } from 'lucide-react';
+import { Bell, Award, CheckCircle, PenTool, Search, ShieldCheck, AlertCircle } from 'lucide-react';
 import { useUser } from '@/src/contexts/UserContext';
 import { useNotifications } from '@/src/contexts/NotificationContext';
-import EventCard from '@/src/components/EventCard';
-import { motion } from 'motion/react';
+import { supabaseError } from '@/src/services/supabase';
 
 export default function HomePage() {
   const { user } = useUser();
@@ -15,103 +14,141 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    EventRepository.listAll()
-      .then(setEvents)
-      .finally(() => setLoading(false));
+    if (supabaseError) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchEvents = async () => {
+      try {
+        const data = await getEvents();
+        setEvents(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEvents();
   }, []);
 
+  const isGestor = user && ['servidor', 'gestor', 'admin'].includes(user.perfil);
+
+  if (supabaseError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center">
+        <div className="bg-red-50 p-8 rounded-[32px] border border-red-100 max-w-md">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Erro de Configuração</h2>
+          <p className="text-gray-600 mb-6">{supabaseError}</p>
+          <div className="text-sm text-gray-500 bg-white p-4 rounded-2xl border border-red-50">
+            Configure as variáveis <strong>VITE_SUPABASE_URL</strong> e <strong>VITE_SUPABASE_ANON_KEY</strong> no menu de Configurações (Settings) do AI Studio.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-12 pb-12">
+    <div className="space-y-10 pb-10">
       {/* Header */}
       <header className="flex justify-between items-center">
         <div>
-          <h1 className="text-4xl font-black text-gray-900 tracking-tighter">Olá, {user?.nome.split(' ')[0] || 'Visitante'}</h1>
-          <p className="text-gray-500 font-bold mt-1">Confira o que está acontecendo no campus</p>
+          <h1 className="text-2xl font-bold text-gray-900">Olá, {user?.nome || 'Visitante'}</h1>
+          <p className="text-gray-500">Bem-vindo ao portal de Assinatura e Validação</p>
         </div>
-        <Link to="/notificacoes" className="relative p-4 bg-white rounded-[1.5rem] shadow-sm border border-gray-100 hover:bg-gray-50 transition-all active:scale-95">
-          <Bell className="w-6 h-6 text-gray-700" />
+        <Link to="/notificacoes" className="relative p-2 rounded-full hover:bg-gray-100 transition-colors">
+          <Bell className="w-6 h-6 text-gray-600" />
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-black text-white ring-4 ring-gray-50">
+            <span className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white ring-2 ring-white">
               {unreadCount}
             </span>
           )}
         </Link>
       </header>
 
-      {/* Próximos Eventos */}
-      <section>
-        <div className="flex justify-between items-end mb-6 px-2">
-          <h2 className="text-xl font-black text-gray-900 tracking-tight">Próximos eventos</h2>
-          <Link to="/explorar" className="text-sm font-black text-indigo-600 hover:underline flex items-center gap-1">
-            Ver todos <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-        
-        {loading ? (
-          <div className="flex gap-4 overflow-hidden">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="w-72 h-56 bg-white rounded-[2.5rem] animate-pulse border border-gray-100" />
-            ))}
-          </div>
-        ) : events.length > 0 ? (
-          <div className="flex overflow-x-auto pb-6 -mx-4 px-4 gap-2 scrollbar-hide">
-            {events.map(event => (
-              <EventCard key={event.id} event={event} />
-            ))}
-          </div>
-        ) : (
-          <div className="bg-white p-12 rounded-[3rem] text-center border border-gray-100 shadow-sm">
-            <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                <CalendarIcon className="w-10 h-10 text-gray-200" />
+      {/* Main Actions - Signing and Validating */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Link 
+          to="/validar-certificado" 
+          className="group relative overflow-hidden rounded-[32px] bg-indigo-600 p-8 text-white shadow-xl shadow-indigo-200 transition-all hover:scale-[1.02] hover:shadow-2xl active:scale-95"
+        >
+          <div className="relative z-10">
+            <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md">
+              <ShieldCheck className="h-8 w-8 text-white" />
             </div>
-            <p className="text-gray-500 font-bold">Nenhum evento programado para os próximos dias.</p>
+            <h2 className="text-2xl font-bold tracking-tight">Validar Certificado</h2>
+            <p className="mt-2 text-indigo-100">Verifique a autenticidade de certificados emitidos pelo sistema usando o código de validação.</p>
           </div>
+          <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10 transition-transform group-hover:scale-150" />
+        </Link>
+
+        {isGestor ? (
+          <Link 
+            to="/gestor/assinador" 
+            className="group relative overflow-hidden rounded-[32px] bg-white p-8 text-gray-900 shadow-xl shadow-gray-200 ring-1 ring-black/5 transition-all hover:scale-[1.02] hover:shadow-2xl active:scale-95"
+          >
+            <div className="relative z-10">
+              <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50">
+                <PenTool className="h-8 w-8 text-indigo-600" />
+              </div>
+              <h2 className="text-2xl font-bold tracking-tight">Assinar Documentos</h2>
+              <p className="mt-2 text-gray-500">Gere assinaturas digitais institucionais para certificados e documentos oficiais.</p>
+            </div>
+            <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-indigo-50/50 transition-transform group-hover:scale-150" />
+          </Link>
+        ) : (
+          <Link 
+            to="/certificados" 
+            className="group relative overflow-hidden rounded-[32px] bg-white p-8 text-gray-900 shadow-xl shadow-gray-200 ring-1 ring-black/5 transition-all hover:scale-[1.02] hover:shadow-2xl active:scale-95"
+          >
+            <div className="relative z-10">
+              <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50">
+                <Award className="h-8 w-8 text-indigo-600" />
+              </div>
+              <h2 className="text-2xl font-bold tracking-tight">Meus Certificados</h2>
+              <p className="mt-2 text-gray-500">Acesse e baixe todos os certificados de eventos que você participou.</p>
+            </div>
+            <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-indigo-50/50 transition-transform group-hover:scale-150" />
+          </Link>
         )}
       </section>
 
-      {/* Ações Rápidas */}
-      <section>
-        <h2 className="text-xl font-black text-gray-900 tracking-tight mb-6 px-2">Ações rápidas</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Link to="/explorar" className="group flex items-center p-6 bg-white rounded-[2rem] shadow-sm border border-gray-100 hover:border-indigo-200 transition-all">
-            <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center mr-4 group-hover:scale-110 transition-transform">
-              <Compass className="w-7 h-7 text-indigo-600" />
-            </div>
-            <span className="font-black text-gray-800 tracking-tight">Explorar</span>
+      {/* Secondary Actions */}
+      <section className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <Link to="/explorar" className="flex flex-col items-center justify-center rounded-3xl bg-white p-6 text-center shadow-sm ring-1 ring-black/5 transition-all hover:bg-gray-50">
+          <Search className="mb-3 h-6 w-6 text-indigo-600" />
+          <span className="text-sm font-bold text-gray-700">Explorar</span>
+        </Link>
+        <Link to="/certificados" className="flex flex-col items-center justify-center rounded-3xl bg-white p-6 text-center shadow-sm ring-1 ring-black/5 transition-all hover:bg-gray-50">
+          <Award className="mb-3 h-6 w-6 text-indigo-600" />
+          <span className="text-sm font-bold text-gray-700">Certificados</span>
+        </Link>
+        <Link to="/perfil" className="flex flex-col items-center justify-center rounded-3xl bg-white p-6 text-center shadow-sm ring-1 ring-black/5 transition-all hover:bg-gray-50">
+          <CheckCircle className="mb-3 h-6 w-6 text-indigo-600" />
+          <span className="text-sm font-bold text-gray-700">Perfil</span>
+        </Link>
+        {isGestor && (
+          <Link to="/gestor/painel" className="flex flex-col items-center justify-center rounded-3xl bg-white p-6 text-center shadow-sm ring-1 ring-black/5 transition-all hover:bg-gray-50">
+            <PenTool className="mb-3 h-6 w-6 text-indigo-600" />
+            <span className="text-sm font-bold text-gray-700">Gestão</span>
           </Link>
-          
-          <Link to="/certificados" className="group flex items-center p-6 bg-white rounded-[2rem] shadow-sm border border-gray-100 hover:border-green-200 transition-all">
-            <div className="w-14 h-14 bg-green-50 rounded-2xl flex items-center justify-center mr-4 group-hover:scale-110 transition-transform">
-              <Award className="w-7 h-7 text-green-600" />
-            </div>
-            <span className="font-black text-gray-800 tracking-tight">Certificados</span>
-          </Link>
-
-          {user && ['servidor', 'gestor', 'admin'].includes(user.perfil) && (
-             <Link to="/evento/criar" className="group flex items-center p-6 bg-indigo-600 rounded-[2rem] shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all">
-                <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mr-4 group-hover:scale-110 transition-transform">
-                  <PlusCircle className="w-7 h-7 text-white" />
-                </div>
-                <span className="font-black text-white tracking-tight">Criar Evento</span>
-            </Link>
-          )}
-        </div>
+        )}
       </section>
 
-      {/* Minhas Inscrições */}
-      {user && (
-        <section>
-          <h2 className="text-xl font-black text-gray-900 tracking-tight mb-6 px-2">Minhas inscrições</h2>
-          <div className="space-y-4">
-            {events.slice(0, 2).map(event => (
-              <EventCard key={event.id} event={event} variant="vertical" />
-            ))}
-            {events.length === 0 && !loading && (
-              <p className="text-sm text-gray-400 font-bold px-4">Você ainda não se inscreveu em nenhum evento.</p>
-            )}
+      {/* Info Section */}
+      <section className="rounded-[32px] bg-gray-900 p-8 text-white">
+        <div className="max-w-2xl">
+          <h2 className="text-2xl font-bold tracking-tight">Segurança e Autenticidade</h2>
+          <p className="mt-4 text-gray-400 leading-relaxed">
+            Todos os documentos assinados e certificados emitidos por esta plataforma possuem um código de validação único. 
+            Isso garante que a informação seja íntegra e possa ser verificada por qualquer pessoa ou instituição a qualquer momento.
+          </p>
+          <div className="mt-6 flex gap-4">
+            <Link to="/sistema/sobre" className="text-sm font-bold text-indigo-400 hover:text-indigo-300 transition-colors">Saiba mais sobre a tecnologia &rarr;</Link>
           </div>
-        </section>
-      )}
+        </div>
+      </section>
     </div>
   );
 }

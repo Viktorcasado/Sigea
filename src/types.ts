@@ -10,62 +10,34 @@ export interface User {
   siape?: string;
   instituicao?: string;
   campus?: string;
-  avatar_url?: string;
 }
 
 export interface Event {
-  id: string;
+  id: number;
   titulo: string;
   descricao: string;
   data_inicio: string;
   data_fim: string;
   local: string;
   banner_url?: string;
-  status: 'rascunho' | 'publicado' | 'encerrado';
-  modalidade: 'Presencial' | 'Online' | 'Híbrido';
+  status?: 'rascunho' | 'publicado' | 'encerrado';
+  modalidade?: 'Presencial' | 'Online' | 'Híbrido';
   vagas?: number;
   instituicao?: string;
   campus?: string;
 }
 
-export interface Activity {
-  id: string;
-  event_id: string;
-  titulo: string;
-  descricao: string;
-  tipo: ActivityType;
-  data: string;
-  hora_inicio: string;
-  hora_fim: string;
-  local: string;
-  carga_horaria_minutos?: number;
-}
-
-export type ActivityType = 'palestra' | 'oficina' | 'minicurso' | 'mesa_redonda' | 'seminario' | 'outro';
-
-export interface Inscricao {
-  id: string;
-  event_id: string;
+export interface Inscription {
+  id: number;
   user_id: string;
-  status: 'confirmada' | 'cancelada';
-  registered_at: string;
-}
-
-export interface Vinculo {
-  id: string;
-  user_id: string;
-  instituicao: string;
-  campus: string;
-  matricula?: string;
-  siape?: string;
-  status: 'pendente' | 'aprovado' | 'rejeitado';
+  event_id: number;
   created_at: string;
 }
 
-export type NotificationType = 'evento' | 'certificado' | 'sistema' | 'vinculo';
+export type NotificationType = 'evento' | 'aviso' | 'sistema';
 
 export interface Notification {
-  id: string;
+  id: number;
   titulo: string;
   mensagem: string;
   tipo: NotificationType;
@@ -81,11 +53,42 @@ export interface Certificate {
   data_emissao: string;
   codigo_validacao: string;
   carga_horaria_minutos: number;
-  evento?: Event;
+  evento: Event;
 }
 
+export type ActivityType = 'palestra' | 'minicurso' | 'mesa_redonda' | 'outra';
+
+export interface Activity {
+  id: number;
+  event_id: number;
+  titulo: string;
+  descricao: string;
+  tipo: ActivityType;
+  data: string;
+  hora_inicio: string;
+  hora_fim: string;
+  local: string;
+  instrutor?: string;
+  carga_horaria_minutos?: number;
+}
+
+export type VinculoStatus = 'pendente' | 'aprovado' | 'rejeitado';
+
+export interface Vinculo {
+  id: number;
+  user_id: string;
+  instituicao: string;
+  campus: string;
+  matricula?: string;
+  siape?: string;
+  status: VinculoStatus;
+  created_at: string;
+}
+
+// Tipos que estavam faltando e causando erros
 export type UserProfile = 'aluno' | 'servidor' | 'comunidade_externa' | 'gestor' | 'admin';
 export type UserStatus = 'ativo_comunidade' | 'ativo_vinculado' | 'gestor' | 'admin';
 export type EventInstitution = string;
 export type EventModality = 'Presencial' | 'Online' | 'Híbrido';
-export type Presenca = any;
+export type Inscricao = Inscription;
+export type Presenca = any; // Definição de placeholder, pode ser refinada
